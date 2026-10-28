@@ -18,10 +18,10 @@ from static files.
 
 | What | How |
 | --- | --- |
-| City | the `Vancouver ▾` button in the bottom bar opens the city list (Vancouver, Toronto, Hawai'i, Hong Kong, Amsterdam, Sydney) |
-| Time | the time slider, or `cycle` for a full day in seven minutes |
-| Weather | `clear` / `rain` / `snow` (hand-picked weather leaves location mode, because a city always shows its real sky) |
-| Ambience | `sound` plus a volume slider — each city has its own chord set, tempo, brightness and reverb |
+| City | the `city ▾` row inside the top-left card opens the city list (Vancouver, Toronto, Hawai'i, Hong Kong, Amsterdam, Sydney) |
+| Time | the slider in the card, or `cycle` for a full day in seven minutes (`own` switches to your clock) |
+| Weather | *not a control* — every city always shows its own real sky, which is why the card and the scene agree |
+| Ambience | the `sound` row in the card, with a volume slider — each city has its own chord set, tempo, brightness and reverb |
 | Corner card | local time, condition, temperature, season, source; `↻` refetches that city now; click the header to collapse |
 | The garden | click the pagoda island |
 

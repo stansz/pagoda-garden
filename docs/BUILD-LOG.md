@@ -91,6 +91,13 @@ single cycling button under 560 px, the bar stacks into two rows there with a sc
 the cover-crop now leans left on portrait windows so the island (the thing you click to enter the
 garden) stays visible. Verified at 390, 430, 820 and 1280 px in a real engine.
 
+## Oct 27 — the card is the interface
+
+The bottom bar kept covering the pagoda island on shorter windows, so it is gone: all controls moved
+into the corner card (city dropdown, time slider + cycle/own, sound + volume), which collapses to a
+single header line. Manual weather went too — each city now always shows its real sky, so the card
+and the art can never disagree. The art owns the whole lower screen.
+
 ## Things deliberately not done
 
 - **No bundler, no framework, no build step.** Each page is one self-contained HTML file so it

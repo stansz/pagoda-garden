@@ -111,21 +111,23 @@ master lowpass from 18 kHz to 9 kHz, and the season tints the pad cutoff (±6–
 18 %; the inline analyser (`master → analyser → destination`) feeds `PIXEL.audio().rms` for the
 headless checks.
 
-### Bar layout and small screens
+### Controls live in the card
 
-The bottom bar is one row on desktop: time slider + clock + `cycle` + `own`, a `city ▾` dropdown
-(six cities, panel opens above the button and closes on outside click/Escape), weather chips, and
-`sound` + volume. Below 760 px the labels go and the slider tightens; below 560 px the bar becomes
-two rows (time; then city + a single `clear ▾` weather cycler + sound + volume) and the art gets a
-bottom scrim so the controls read over it. Because the scene is cover-cropped, portrait windows
-(`height > 0.95 × width`) bias the crop toward the left so the pagoda island stays on screen and
-clickable.
+There is no bottom bar. The corner card is the whole interface: its header is the collapsed state
+(city, real local clock, `↻`, chevron) and the expanded body holds the condition, season, source, and
+three control rows — `city ▾` (dropdown, opens under the button, closes on outside click/Escape),
+`time` (slider + `cycle` + `own`), and `sound` (toggle + volume). The art keeps the entire lower
+screen, so the pagoda island is never covered; because the scene is cover-cropped, portrait windows
+(`height > 0.95 × width`) bias the crop toward the left so the island stays on screen and clickable.
+
+Weather is not a control any more: the sky is always the selected city's real weather (Open-Meteo),
+and a stored hand-picked weather is ignored on load.
 
 ### Time, weather, card, `?city=`
 
 `?city=<id>` on load beats `localStorage`; unknown ids fall back. Selecting a city sets the
 clock to its local hour and fetches Open-Meteo (`current=weather_code,temperature_2m,cloud_cover`,
-`timezone=auto`); the clock re-syncs every 30 s, weather every 15 min or on `↻`. A hand-picked
+`timezone=auto`); the clock re-syncs every 30 s, weather every 15 min or on `↻`. (A hand-picked
 weather leaves location mode. Offline, the clock still works and the weather stays put.
 
 ### Performance notes
