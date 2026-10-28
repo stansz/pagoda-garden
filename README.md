@@ -22,7 +22,7 @@ from static files.
 | Time | *not a control* — the scene always runs on the selected city's real local clock, so the light is whatever it is there right now |
 | Weather | *not a control* — every city always shows its own real sky, which is why the card and the scene agree |
 | Ambience | the `sound` row in the card, with a volume slider — each city has its own chord set, tempo, brightness and reverb |
-| Corner card | local time, condition, temperature, season, source; `↻` refetches that city now; click the header to collapse |
+| Corner card | collapsed it reads `Vancouver 01:22` / `Overcast 7 °C Autumn`; expanded it adds the hemisphere, the weather source and the controls. `↻` refetches that city now; click the header to collapse |
 | The garden | click the pagoda island |
 
 The city page also reads `?city=<id>`, so links can land on a specific city.

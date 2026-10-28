@@ -114,8 +114,9 @@ headless checks.
 ### Controls live in the card
 
 There is no bottom bar. The corner card is the whole interface: its header is the collapsed state
-(city, real local clock, `↻`, chevron) and the expanded body holds the condition, season, source, plus
-two control rows — `city ▾` (dropdown, opens under the button, closes on outside click/Escape) and
+(city, real local clock, `↻`, chevron), a summary line under it shows the live condition, temperature
+and season (`#infoSum`, hidden once the card is open), and the expanded body holds the hemisphere,
+the weather source and two control rows — `city ▾` (dropdown, opens under the button, closes on outside click/Escape) and
 `sound` (toggle + volume). The art keeps the entire lower screen, so the pagoda island is never
 covered; because the scene is cover-cropped, portrait windows (`height > 0.95 × width`) bias the crop
 toward the left so the island stays on screen and clickable.

@@ -104,6 +104,13 @@ Last of the manual controls to go. The time slider, `cycle` and `own` are gone; 
 `state.hour` from the selected city's real local time once a second, so the card and the light always
 agree and the page can be left open without drifting. Stored time/cycle preferences are ignored.
 
+## Oct 28 — one line of card
+
+Collapsed, the card now reads like a weather station rather than a label: `Vancouver 01:22` with
+`Overcast 7 °C Autumn` underneath, so with the card shut there is still one line of live information.
+The same strings are computed once in `updateInfo` and painted into both the summary line and the
+expanded body, so the two can never disagree.
+
 ## Things deliberately not done
 
 - **No bundler, no framework, no build step.** Each page is one self-contained HTML file so it

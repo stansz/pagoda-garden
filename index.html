@@ -54,6 +54,10 @@
   #infoClock{font-variant-numeric:tabular-nums;color:#e8cb84}
   #info .chev{font-size:9px;color:#8798a2;transition:transform .18s}
   #info:not(.closed) .chev{transform:rotate(180deg)}
+  #infoSum{display:flex;align-items:baseline;gap:7px;padding:0 11px 8px;color:#cfdae1;font-size:12px}
+  #info:not(.closed) #infoSum{display:none}
+  #infoTempS{color:#e8cb84;font-variant-numeric:tabular-nums}
+  #infoSeasonS{font-size:11px}
   #infoBody{padding:0 11px 9px;display:flex;flex-direction:column;gap:3px}
   #info.closed #infoBody{display:none}
   #infoBody .row{display:flex;gap:6px;align-items:baseline}
@@ -98,6 +102,7 @@
     <button id="infoRefresh" aria-label="Refresh weather" title="Refresh weather now">&#8635;</button>
     <span class="chev" aria-hidden="true">&#9660;</span>
   </div>
+  <div id="infoSum"><span id="infoCondS">—</span><span id="infoTempS"></span><span id="infoSeasonS" class="muted"></span></div>
   <div id="infoBody">
     <div class="row"><span id="infoCond">Clear sky</span><span id="infoTemp"></span></div>
     <div class="row muted" id="infoSeason"></div>
@@ -3051,6 +3056,7 @@ function updateAudio(){
 
 let uiEl, hourInput, clockEl, cycleBtn, ownBtn, cityBtns = [], wxBtns = [], snowBtn = null;
 let infoEl, infoHead, infoPlace, infoClock, infoRefresh, infoCond, infoTemp, infoMeta, infoSceneEl, infoSeasonEl;
+let infoCondS = null, infoTempS = null, infoSeasonS = null;
 let gardenLink = null, dprNow = 1;
 
 let fetchState = "idle", lastFetchAt = 0, placeCode = null, placeTemp = null;
@@ -3140,15 +3146,17 @@ function updateInfo(){
     infoSeasonEl.textContent = s.charAt(0).toUpperCase() + s.slice(1) + " · " +
       (hemisphereOf(c.lat) === "south" ? "southern" : "northern") + " hemisphere";
   }
-  if(!state.own){
-    infoCond.textContent = !state.wxAuto ? condLabel(wxToCode(state.wx))
+  const condText = !state.own
+    ? (!state.wxAuto ? condLabel(wxToCode(state.wx))
       : fetchState === "loading" ? "Loading…"
-      : placeCode === null ? "—" : condLabel(placeCode);
-    infoTemp.textContent = placeTemp === null ? "" : Math.round(placeTemp) + "°C";
-  } else {
-    infoCond.textContent = condLabel(wxToCode(state.wx));
-    infoTemp.textContent = "";
-  }
+      : placeCode === null ? "—" : condLabel(placeCode))
+    : condLabel(wxToCode(state.wx));
+  const tempText = (state.own || placeTemp === null) ? "" : Math.round(placeTemp) + "°C";
+  infoCond.textContent = condText;
+  infoTemp.textContent = tempText;
+  if(infoCondS) infoCondS.textContent = condText;
+  if(infoTempS) infoTempS.textContent = tempText;
+  if(infoSeasonS) infoSeasonS.textContent = state.season.charAt(0).toUpperCase() + state.season.slice(1);
 
   const age = lastFetchAt ? Math.round((Date.now() - lastFetchAt) / 60000) : null;
   infoMeta.textContent = (state.own || !state.wxAuto) ? "Weather set by hand"
@@ -3518,6 +3526,9 @@ function boot(){
   infoRefresh = document.getElementById("infoRefresh");
   infoCond = document.getElementById("infoCond");
   infoTemp = document.getElementById("infoTemp");
+  infoCondS = document.getElementById("infoCondS");
+  infoTempS = document.getElementById("infoTempS");
+  infoSeasonS = document.getElementById("infoSeasonS");
   infoMeta = document.getElementById("infoMeta");
   infoSceneEl = document.getElementById("infoScene");
   infoSeasonEl = document.getElementById("infoSeason");
