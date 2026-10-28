@@ -98,6 +98,12 @@ into the corner card (city dropdown, time slider + cycle/own, sound + volume), w
 single header line. Manual weather went too — each city now always shows its real sky, so the card
 and the art can never disagree. The art owns the whole lower screen.
 
+## Oct 27 — the clock is real
+
+Last of the manual controls to go. The time slider, `cycle` and `own` are gone; the scene now resyncs
+`state.hour` from the selected city's real local time once a second, so the card and the light always
+agree and the page can be left open without drifting. Stored time/cycle preferences are ignored.
+
 ## Things deliberately not done
 
 - **No bundler, no framework, no build step.** Each page is one self-contained HTML file so it

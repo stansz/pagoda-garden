@@ -113,10 +113,6 @@
     <div class="row muted" id="infoScene" hidden></div>
     <div class="ctl"><span class="lbl">city</span>
       <button id="cityBtn" aria-haspopup="true" aria-expanded="false" title="Change city">Vancouver &#9662;</button></div>
-    <div class="ctl"><span class="lbl">time</span>
-      <input id="hour" type="range" min="0" max="24" step="0.05" value="17.2" aria-label="Time of day">
-      <button id="cycle" aria-pressed="true" title="Slow day and night cycle">cycle</button>
-      <button id="own" aria-pressed="false" title="Use your own clock instead of the city's">own</button></div>
     <div class="ctl" style="margin-bottom:2px"><span class="lbl">sound</span>
       <button id="snd" aria-pressed="false" title="Ambient sound">sound</button>
       <input id="vol" type="range" min="0" max="1" step="0.01" value="0.18" aria-label="Volume"></div>
@@ -3326,11 +3322,10 @@ function loadPrefs(){
   const freshCity = !!fromUrl && fromUrl !== saved;   // ?city= arrived with a different city
 
   state.city = id;
-  if(pr && typeof pr.cycleOn === "boolean") state.cycleOn = pr.cycleOn && !reduceMotion;
-  if(pr && typeof pr.own === "boolean") state.own = pr.own;
+  state.cycleOn = false;                       // there is no fake clock any more
+  state.own = false;
   if(pr && typeof pr.infoOpen === "boolean") infoEl.classList.toggle("closed", !pr.infoOpen);
   if(pr) restoreSession(pr.session);
-  if(pr && Number.isFinite(pr.hour)) state.hour = pr.hour;
   // sound: the level is remembered, and "on" is remembered as an intent that
   // is only honoured on the first gesture (never autoplay)
   if(pr && Number.isFinite(pr.vol)) vol = clamp(pr.vol, 0, 1);
@@ -3341,6 +3336,7 @@ function loadPrefs(){
     state.cycleOn = false;
     state.hour = localHour(cityRecord(id).tz);       // start on the requested city's time
   }
+  state.hour = localHour(cityRecord(id).tz);    // the real clock, always
   refreshSeason();
   setWeather("clear");                       // the sky is always the city's real weather
 
@@ -3406,14 +3402,15 @@ function updateWeather(dt){
 }
 
 /* --------------------------------------------------------------- main loop */
-let lastFrame = 0;
+let lastFrame = 0, hourSyncAt = 0;
 function tick(now){
   const dt = Math.min(0.05, Math.max(0.001, (now - lastFrame) / 1000));
   lastFrame = now;
-  if(state.cycleOn && !reduceMotion){
-    state.hour = (state.hour + dt * (24 / 420)) % 24;      // a full day in seven minutes
-    if(hourInput) hourInput.value = state.hour.toFixed(2);
-    updateClockLabel();
+  // the scene is always the city's real local time: resync once a second
+  if(now - hourSyncAt > 1000){
+    hourSyncAt = now;
+    const real = cityNow();
+    if(real !== state.hour){ state.hour = real; updateClockLabel(); }
   }
   updateWeather(dt);
   drawFrame(now, dt);
@@ -3697,24 +3694,6 @@ function boot(){
     clearTimeout(rzT);
     rzT = setTimeout(measure, 140);
   });
-
-  hourInput.addEventListener("input", () => {
-    state.hour = parseFloat(hourInput.value);
-    state.cycleOn = false;
-    cycleBtn.setAttribute("aria-pressed", "false");
-    updateClockLabel();
-    updateInfo();
-    savePrefsSoon();
-  });
-
-  cycleBtn.addEventListener("click", () => {
-    state.cycleOn = !state.cycleOn;
-    cycleBtn.setAttribute("aria-pressed", String(state.cycleOn));
-    updateInfo();
-    savePrefs();
-  });
-
-  ownBtn.addEventListener("click", () => selectOwn(!state.own));
 
   for(let i = 0; i < cityBtns.length; i++){
     cityBtns[i].addEventListener("click", () => { setCity(cityBtns[i].dataset.city, false); closeCityMenu(); });

@@ -19,7 +19,7 @@ from static files.
 | What | How |
 | --- | --- |
 | City | the `city ▾` row inside the top-left card opens the city list (Vancouver, Toronto, Hawai'i, Hong Kong, Amsterdam, Sydney) |
-| Time | the slider in the card, or `cycle` for a full day in seven minutes (`own` switches to your clock) |
+| Time | *not a control* — the scene always runs on the selected city's real local clock, so the light is whatever it is there right now |
 | Weather | *not a control* — every city always shows its own real sky, which is why the card and the scene agree |
 | Ambience | the `sound` row in the card, with a volume slider — each city has its own chord set, tempo, brightness and reverb |
 | Corner card | local time, condition, temperature, season, source; `↻` refetches that city now; click the header to collapse |

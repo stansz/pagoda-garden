@@ -114,14 +114,16 @@ headless checks.
 ### Controls live in the card
 
 There is no bottom bar. The corner card is the whole interface: its header is the collapsed state
-(city, real local clock, `↻`, chevron) and the expanded body holds the condition, season, source, and
-three control rows — `city ▾` (dropdown, opens under the button, closes on outside click/Escape),
-`time` (slider + `cycle` + `own`), and `sound` (toggle + volume). The art keeps the entire lower
-screen, so the pagoda island is never covered; because the scene is cover-cropped, portrait windows
-(`height > 0.95 × width`) bias the crop toward the left so the island stays on screen and clickable.
+(city, real local clock, `↻`, chevron) and the expanded body holds the condition, season, source, plus
+two control rows — `city ▾` (dropdown, opens under the button, closes on outside click/Escape) and
+`sound` (toggle + volume). The art keeps the entire lower screen, so the pagoda island is never
+covered; because the scene is cover-cropped, portrait windows (`height > 0.95 × width`) bias the crop
+toward the left so the island stays on screen and clickable.
 
-Weather is not a control any more: the sky is always the selected city's real weather (Open-Meteo),
-and a stored hand-picked weather is ignored on load.
+Time and weather are not controls any more. `state.hour` is resynced from the city's real local time
+once a second inside the render loop (`hourSyncAt`), so the light always matches the clock in the card;
+stored manual time and weather preferences are ignored on load, and `state.own`/`state.cycleOn` are
+forced `false`. That also removed the old "Scene … cycling" mismatch row in practice.
 
 ### Time, weather, card, `?city=`
 
