@@ -1,0 +1,120 @@
+  html,body{margin:0;height:100%;overflow:hidden;background:#070a0c}
+  canvas{position:fixed;inset:0;display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+
+  /* ---- controls live inside the corner card ---- */
+  #infoBody .ctl{display:flex;align-items:center;gap:6px;margin-top:5px}
+  #infoBody .ctl .lbl{color:#8fa0a9;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;min-width:32px}
+  #infoBody .ctl button{padding:4px 7px}
+  #infoBody #hour{width:74px}
+  #infoBody #vol{width:46px}
+  button{font:inherit;color:#c6d2d9;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.11);
+      border-radius:8px;padding:5px 8px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+  button:hover{background:rgba(255,255,255,.13);color:#fff}
+  button[aria-pressed="true"]{background:rgba(232,203,132,.17);border-color:rgba(232,203,132,.45);color:#f4e2b4}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;
+      background:rgba(255,255,255,.22);outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;
+      background:#e8cb84;box-shadow:0 0 0 4px rgba(232,203,132,.14);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:#e8cb84}
+  #cityBtn{color:#eef3f6}
+  #cityMenu{position:fixed;z-index:7;display:flex;flex-direction:column;gap:2px;padding:6px;
+      border-radius:12px;background:rgba(10,14,17,.9);border:1px solid rgba(255,255,255,.14);
+      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+      box-shadow:0 14px 34px rgba(0,0,0,.45);min-width:132px}
+  #cityMenu[hidden]{display:none}
+  #cityMenu button{text-align:left;border:0;background:transparent;color:#c6d2d9;padding:6px 10px;
+      border-radius:7px;white-space:nowrap}
+  #cityMenu button:hover{background:rgba(255,255,255,.12);color:#fff}
+  #cityMenu button[aria-pressed="true"]{color:#f4e2b4;background:rgba(232,203,132,.12)}
+
+  /* ---- corner card (same contract as relax.html) ---- */
+  #info{position:fixed;top:14px;left:14px;z-index:6;min-width:172px;
+      background:rgba(10,14,17,.62);border:1px solid rgba(255,255,255,.13);border-radius:12px;
+      backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+      color:#e6edf1;font:12.5px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden;
+      box-shadow:0 10px 26px rgba(0,0,0,.3)}
+  #infoHead{display:flex;align-items:center;gap:8px;width:100%;padding:8px 11px;
+      background:transparent;border:0;color:inherit;font:inherit;cursor:pointer;text-align:left;border-radius:0}
+  #infoHead:hover{background:rgba(255,255,255,.07)}
+  #infoRefresh{background:transparent;border:0;color:#8798a2;font:inherit;line-height:1;
+      padding:1px 3px;margin:0;cursor:pointer;border-radius:6px;display:inline-flex;align-items:center}
+  #infoRefresh:hover:not(:disabled){color:#fff;background:rgba(255,255,255,.12)}
+  #infoRefresh:disabled{opacity:.28;cursor:default}
+  #infoRefresh.spin{animation:info-spin .9s linear infinite}
+  @keyframes info-spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion: reduce){ #infoRefresh.spin{animation:none} }
+  #infoPlace{flex:auto;color:#c6d2d9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #infoClock{font-variant-numeric:tabular-nums;color:#e8cb84}
+  #info .chev{font-size:9px;color:#8798a2;transition:transform .18s}
+  #info:not(.closed) .chev{transform:rotate(180deg)}
+  #infoSum{display:flex;align-items:baseline;gap:7px;padding:0 11px 8px;color:#cfdae1;font-size:12px}
+  #info:not(.closed) #infoSum{display:none}
+  #infoTempS{color:#e8cb84;font-variant-numeric:tabular-nums}
+  #infoSeasonS{font-size:11px}
+  #infoBody{padding:0 11px 9px;display:flex;flex-direction:column;gap:3px}
+  #info.closed #infoBody{display:none}
+  #infoBody .row{display:flex;gap:6px;align-items:baseline}
+  #infoBody .row[hidden]{display:none}
+  #infoBody .muted{color:#8798a2;font-size:11.5px;line-height:1.35}
+  @media (max-width:760px){ #info{top:10px;left:10px;min-width:150px} }
+
+  /* ---- focus timer: its own pill in the bottom-right, away from the card
+     (top-left) and the island (bottom-left); the panel opens above it ---- */
+  #focus{position:fixed;right:14px;bottom:14px;z-index:6;display:flex;flex-direction:column;
+      align-items:flex-end;gap:8px;color:#e6edf1;font:12.5px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+  #focusPill,#focusPanel{background:rgba(10,14,17,.62);border:1px solid rgba(255,255,255,.13);
+      backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(0,0,0,.3)}
+  #focusPill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
+      color:#93a6b3;font-variant-numeric:tabular-nums}
+  #focusPill:hover{color:#fff;background:rgba(22,28,32,.78)}
+  #focusPill[data-kind="focus"]{color:#e8cb84;border-color:rgba(232,203,132,.38)}
+  #focusPill[data-kind="break"]{color:#9fd0b8;border-color:rgba(159,208,184,.38)}
+  #focusPill .ico{font-size:13px;line-height:1}
+  #focusPanel{width:190px;box-sizing:border-box;padding:10px 12px 12px;border-radius:12px;
+      display:flex;flex-direction:column;gap:8px}
+  #focusPanel[hidden]{display:none}
+  #focusKind{color:#8fa0a9;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+  #focusLeft{font-size:28px;line-height:1.05;color:#c6d2d9;font-variant-numeric:tabular-nums}
+  #focusLeft.focus{color:#e8cb84}
+  #focusLeft.break{color:#9fd0b8}
+  #focusNote{color:#8798a2;font-size:11.5px;line-height:1.35;min-height:1.35em}
+  #focusLens{display:flex;gap:6px}
+  #focusLens[hidden]{display:none}
+  #focusLens button{flex:1}
+  #focusGo{width:100%}
+  .fp-top{display:flex;justify-content:space-between;align-items:center}
+  #focusRounds{display:inline-flex;gap:4px}
+  #focusRounds .dot{width:6px;height:6px;border-radius:50%;border:1px solid rgba(255,255,255,.3)}
+  .dot.done{background:#e8cb84;border-color:#e8cb84}
+  .dot.now{border-color:#e8cb84;box-shadow:0 0 0 2px rgba(232,203,132,.18)}
+  #focusCtl{display:flex;gap:6px}
+  #focusCtl button{flex:1}
+  #focusCtl[hidden]{display:none}
+  #focusAuto{display:flex;align-items:center;gap:6px;color:#8fa0a9;font-size:11.5px;cursor:pointer}
+  #focusAuto[hidden]{display:none}
+  #focusLeft.paused{opacity:.55}
+  #focusPill[data-paused="true"]{opacity:.7}
+  /* the progress line: a thin strip along the bottom edge, the whole window wide */
+  #focusLine{position:fixed;left:0;bottom:0;height:3px;width:0;z-index:5;pointer-events:none;background:#e8cb84;opacity:.75;transition:width 1s linear,background .6s,opacity .6s}
+  #focusLine[data-kind="break"]{background:#9fd0b8}
+  #focusLine.paused{opacity:.3}
+  #focusLine[hidden]{display:none}
+  @media (prefers-reduced-motion: reduce){ #focusLine{transition:none} }
+  @media (max-width:760px){ #focus{right:10px;bottom:10px} }
+  /* narrower panel on phones, so it stays clear of the island on the left */
+  @media (max-width:520px){ #focusPanel{width:150px;padding:9px 10px 10px} }
+
+  /* ---- the pagoda island is a link into the voxel garden ----
+     Sits under the UI (z-index 4 < bar's 5 and card's 6) so it can never eat a
+     click meant for the controls; the rectangle itself is placed in JS from the
+     framebuffer geometry, so it tracks the island on any window size. */
+  #gardenLink{position:fixed;z-index:4;display:block;cursor:pointer;border-radius:8px;
+      text-decoration:none;-webkit-tap-highlight-color:transparent}
+  #gardenLink .hint{position:absolute;left:50%;bottom:100%;transform:translate(-50%,-7px);
+      padding:4px 9px;border-radius:999px;white-space:nowrap;pointer-events:none;
+      background:rgba(10,14,17,.70);border:1px solid rgba(255,255,255,.14);
+      color:#dfe8ee;font:11.5px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
+      letter-spacing:.06em;opacity:0;transition:opacity .16s}
+  #gardenLink:hover .hint,#gardenLink:focus-visible .hint{opacity:1}
+  #gardenLink:focus-visible{outline:2px solid rgba(232,203,132,.75);outline-offset:3px}
+  @media (prefers-reduced-motion: reduce){ #gardenLink .hint{transition:none} }

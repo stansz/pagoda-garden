@@ -130,12 +130,17 @@ thin line along the bottom edge fills gold through a round and green through a b
 eases a slight cool tint over the pixel art in focus and a warm one in a break. All deadlines are
 still wall-clock and persisted — a paused round now survives a reload for up to twelve hours.
 
+## Oct 30 — one file became many
+
+The two pages had grown to a few thousand lines of inline script each, and small pieces — `clamp`, the `MOOD` table, the WMO labels, the impulse-response and noise helpers — were copied in both. Cut the inline CSS and JavaScript out into plain files loaded with `<link rel="stylesheet">` and classic `<script src>`: `city/` for the pixel page (core, draw, build, one file per city, trees, island, frame, audio, ui, focus, menu, pixel), `voxel-garden/js/` for the garden, and `shared/` for the code the two pages genuinely share. The cuts are exact slices of the old script in its original order, so the files still share one global scope and only the load order matters. No `type="module"`, no `import`/`export`, no build step: both pages still work from `file://`. The render hashes did not move.
+
 ## Things deliberately not done
 
-- **No bundler, no framework, no build step.** Each page is one self-contained HTML file so it
-  works from `file://` as well as Pages.
-- **No modular split yet.** City state is data (`CITIES` records), art stays in one file per page;
-  splitting into modules would cost `file://` and buy nothing at this size.
+- **No bundler, no framework, no build step.** Each page is an HTML file plus plain stylesheet
+  and classic script files, served exactly as written, so it works from `file://` as well as Pages.
+- **No ES modules.** The pages are split into classic scripts — one per concern, with the
+  code both pages use in `shared/` — which keeps `file://` working. ES modules remain
+  deliberately unused.
 - **No seasonal re-bake of the whole city art.** Only the tree and Sydney's grade change with the
   season; skylines and the garden island stay as baked.
 - **No audio on the pixel page.** The garden kept the ambient engine; the city view is silent.

@@ -1,26 +1,34 @@
 # Technical reference
 
-Two self-contained pages, no build step, no framework, no bundler. Everything below is what
-is actually in the repository, not a plan.
+Two pages, each an HTML file plus its own stylesheet and classic scripts, no build step, no
+framework, no bundler. Everything below is what is actually in the repository, not a plan.
 
 ```
-index.html            pixel city view — the front page
-voxel-garden/index.html     voxel pagoda garden
+index.html            pixel city view — the front page (markup, stylesheet and script tags)
+city/                 pixel city view code: city.css + one classic script per concern,
+                      with one file per city under city/cities/
+voxel-garden/index.html     voxel pagoda garden (markup, stylesheet and script tags)
+voxel-garden/js/      the garden's classic scripts (world, render, audio, ui, loop)
+voxel-garden/garden.css     the garden's stylesheet
+shared/               code both pages load: time.js, weather.js, audio.js
 proto/index.html      archive index for the two losing prototypes
 proto/silhouette/     flat parallax prototype (vanilla canvas)
 proto/sketch/         Rough.js sketchbook prototype (CDN, degrades offline)
 docs/                 this file, the build log, pixel notes, stills
 ```
 
-Both pages share three things, deliberately kept in sync by hand:
+Both pages load three shared scripts first, then their own files in order:
 
-- the time-of-day table (`MOOD` + `moodAt(hour)` — sky top/bottom, a tint and a night factor);
-- the corner card (place, real local time via `Intl`, condition + temperature via
-  [Open-Meteo](https://open-meteo.com/), a `↻` refresh, collapse, and a "scene" line when the
-  displayed hour differs from the city's real one);
-- `localStorage` prefs, so a reload looks like it was left.
+- `shared/time.js` — the time-of-day table (`MOOD` + `moodAt(hour)` — sky top/bottom, a tint
+  and a night factor) plus `clamp`, `pad2` and `ownHour`;
+- `shared/weather.js` — the WMO code mapping (`wxToCode`, `condLabel`);
+- `shared/audio.js` — the generated impulse-response and noise helpers (`makeImpulse`,
+  `makeNoise`).
 
-They also share one WMO mapping for weather: `71/73/75/77/85/86` → snow,
+The corner card and the `localStorage` prefs are still implemented separately in each page and
+deliberately kept in sync by hand.
+
+The pages share one WMO mapping for weather: `71/73/75/77/85/86` → snow,
 `51-67 / 80-82 / 95+` → rain, everything else → clear. Cloud cover is kept as a separate
 0..1 value that flattens the light.
 
@@ -213,7 +221,9 @@ Feature work from the prototype phase is kept on `proto/silhouette`, `proto/sket
 
 ## 5. Gotchas
 
-- Keep these pages dependency-free and single-file; `file://` must work.
+- Keep these pages dependency-free and build-free; they are split into classic scripts loaded
+  with `<script src>` and stylesheets loaded with `<link>`, so `file://` must keep working (no
+  ES modules, no bundler).
 - Do not write these files with Windows PowerShell `Set-Content`: it re-encodes non-ASCII
   (`·`, `…`, `°`) and mangles them. Use the editing tools or a UTF-8 writer.
 - The pixel view crops on unusual aspect ratios (very tall/wide windows); extreme cases crop

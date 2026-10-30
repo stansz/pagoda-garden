@@ -47,7 +47,10 @@ a remembered `sound on` waits for the first click before starting, because brows
   cropped edge to edge; ordered Bayer dithering does the gradients. Cities are records
   (`CITIES`) with coordinates, time zone, palette, landmark builder and a seasonal tree;
   seasons come from the city's real local date and hemisphere. Drifting petals, seeds and
-  leaves are emitted from the tree crowns.
+  leaves are emitted from the tree crowns. The page's CSS and JavaScript live beside it:
+  `city/city.css` and classic scripts under `city/` (core, draw, build, one file per city,
+  trees, island, frame, audio, ui, focus, menu, pixel), with the pieces both pages share in
+  `shared/`.
 - **Garden** — 874 voxels in one canvas 2D scene, painter-sorted by face-centre depth, with
   a fixed light, a time-of-day grade, rain/snow particles, pre-rendered glow sprites and a
   small WebAudio ambient engine (pad, sub, plucks, convolution reverb, compressor).
@@ -57,8 +60,13 @@ a remembered `sound on` waits for the first click before starting, because brows
 ## Repository layout
 
 ```
-index.html            pixel city view (main page)
-voxel-garden/index.html     voxel garden
+index.html            pixel city view (main page): markup, stylesheet and script tags
+city/                 pixel city view code: city.css + one classic script per concern,
+                      with one file per city under city/cities/
+voxel-garden/index.html     voxel garden: markup, stylesheet and script tags
+voxel-garden/js/      the garden's classic scripts (world, render, audio, ui, loop)
+voxel-garden/garden.css     the garden's stylesheet
+shared/               code both pages load: time.js, weather.js, audio.js
 proto/                archived style prototypes + their index
 docs/REFERENCE.md     technical reference
 docs/BUILD-LOG.md     how this got built, decision by decision
@@ -68,9 +76,12 @@ docs/shots/           stills from headless renders
 
 ## Running it locally
 
-There is no build step and no dependency. Most pages work from `file://` directly; the
-garden and the city view are single self-contained HTML files. The pixel archive's sketch
-prototype loads Rough.js from a CDN and degrades gracefully offline.
+There is no build step and no dependency. The pages work from `file://` directly: each one is
+an HTML file plus the stylesheet and classic `<script src>` files that sit next to it (the
+city page in `city/`, the garden in `voxel-garden/`, and the code both pages share in
+`shared/`), so keep the directories together and open `index.html` or
+`voxel-garden/index.html` as before. There are no ES modules and no bundler. The pixel
+archive's sketch prototype loads Rough.js from a CDN and degrades gracefully offline.
 
 ## Tests
 
