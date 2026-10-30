@@ -3,7 +3,7 @@
 // Chrome DevTools Protocol, prints PASS/FAIL per check, exits 0 only if all pass.
 // No dependencies: Node >= 22 (global fetch + WebSocket).
 //   node .handoff/check-focus.mjs
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -18,6 +18,11 @@ if (!EDGE) { console.error("FAIL edge: msedge.exe not found (set EDGE_PATH)"); p
 
 const PORT = 9333;
 const PAGE = pathToFileURL(resolve("index.html")).href;
+// a browser still on this port would be tested instead of the one launched here
+if (await fetch(`http://127.0.0.1:${PORT}/json/version`).then(() => true, () => false)) {
+  console.error(`FAIL harness: port ${PORT} is already in use by another browser`);
+  process.exit(2);
+}
 const profile = mkdtempSync(join(tmpdir(), "focus-check-"));
 const edge = spawn(EDGE, [
   "--headless=new", `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`,
@@ -50,6 +55,25 @@ async function evaluate(expr) {
   const r = await send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true });
   if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
   return r.result.value;
+}
+// msedge.exe hands off to child processes, so killing the launcher is not enough:
+// ask the browser to quit, then sweep anything still using this run's profile.
+async function closeEdge() {
+  try {
+    const { webSocketDebuggerUrl } = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
+    const b = new WebSocket(webSocketDebuggerUrl);
+    await new Promise((res, rej) => { b.onopen = res; b.onerror = rej; });
+    b.send(JSON.stringify({ id: 1, method: "Browser.close" }));
+  } catch {}
+  await sleep(1000);
+  edge.kill();
+  if (process.platform === "win32") {
+    const leaf = profile.split(/[\\/]/).pop();
+    spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
+      `Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | ` +
+      `Where-Object { $_.CommandLine -like '*${leaf}*' } | ` +
+      `ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`]);
+  }
 }
 async function load() {
   await send("Page.navigate", { url: PAGE });
@@ -232,7 +256,7 @@ try {
   results.push([false, "harness", String(e.message || e)]);
 } finally {
   try { ws && ws.close(); } catch {}
-  edge.kill();
+  await closeEdge();
   await sleep(500);
   try { rmSync(profile, { recursive: true, force: true }); } catch {}
 }

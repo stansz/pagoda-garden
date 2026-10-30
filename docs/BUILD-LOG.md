@@ -119,6 +119,17 @@ countdown, `25m`/`50m` while idle, start / stop / end break and an end-time note
 `Esc` closes it; `f` still toggles. The card is back to place, weather and sound. The branch merged
 into `main` and the `/focus/` preview is gone.
 
+## Oct 30 — pomodoro rounds and on-screen cues
+
+The timer became a real round structure: four focus rounds per cycle, a short break (5 or 10 minutes,
+matching the 25/50 length) after rounds 1–3 and a long one (15/20) after the fourth, with pause,
+`+5m`, `skip break` and an optional auto-start for the next focus. The panel gained four round dots
+and a live note (`ends 21:04, then a 5m break` / `back at 21:09`), and the pill reads `long break 12m`
+when it matters. Because a timer you have to look at is a timer you forget, it also cues the scene: a
+thin line along the bottom edge fills gold through a round and green through a break, and `grade()`
+eases a slight cool tint over the pixel art in focus and a warm one in a break. All deadlines are
+still wall-clock and persisted — a paused round now survives a reload for up to twelve hours.
+
 ## Things deliberately not done
 
 - **No bundler, no framework, no build step.** Each page is one self-contained HTML file so it
