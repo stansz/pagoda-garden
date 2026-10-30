@@ -3,124 +3,19 @@
 // Chrome DevTools Protocol, prints PASS/FAIL per check, exits 0 only if all pass.
 // No dependencies: Node >= 22 (global fetch + WebSocket).
 //   node tests/check-focus.mjs
-import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, existsSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { launch, sleep, until, check, report, pageUrl } from "./browser.mjs";
 
-const BROWSER = [
-  process.env.BROWSER_PATH,
-  "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
-  "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
-  "C:/Program Files/Google/Chrome/Application/chrome.exe",
-  "/usr/bin/google-chrome",
-  "/usr/bin/google-chrome-stable",
-  "/usr/bin/chromium",
-  "/usr/bin/chromium-browser",
-  "/usr/bin/microsoft-edge",
-].filter(Boolean).find(p => existsSync(p));
-if (!BROWSER) { console.error("FAIL browser: no Edge or Chrome found (set BROWSER_PATH)"); process.exit(2); }
-
-const PORT = 9333;
-const PAGE = new URL("../index.html", import.meta.url).href;
-// a browser still on this port would be tested instead of the one launched here
-if (await fetch(`http://127.0.0.1:${PORT}/json/version`).then(() => true, () => false)) {
-  console.error(`FAIL harness: port ${PORT} is already in use by another browser`);
-  process.exit(2);
-}
-const profile = mkdtempSync(join(tmpdir(), "focus-check-"));
-const edge = spawn(BROWSER, [
-  ...(process.env.CI ? ["--no-sandbox"] : []),   // CI containers have no user namespaces
-  "--headless=new", `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`,
-  "--no-first-run", "--no-default-browser-check", "--window-size=1280,800",
-  "--autoplay-policy=no-user-gesture-required", "about:blank",
-], { stdio: "ignore" });
-
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-// poll instead of fixed waits: a CI machine can be several times slower than a desktop
-async function until(fn, ms = 20000) {
-  const end = Date.now() + ms;
-  while (Date.now() < end) {
-    try { if (await fn()) return true; } catch {}
-    await sleep(250);
-  }
-  return false;
-}
-let ws, nextId = 1;
-const pending = new Map();
-const exceptions = [];
-
-async function connect() {
-  for (let i = 0; i < 50; i++) {
-    try {
-      const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
-      const page = list.find(t => t.type === "page");
-      if (page) return page.webSocketDebuggerUrl;
-    } catch {}
-    await sleep(200);
-  }
-  throw new Error("could not reach Edge DevTools");
-}
-function send(method, params = {}) {
-  const id = nextId++;
-  ws.send(JSON.stringify({ id, method, params }));
-  return new Promise((res, rej) => pending.set(id, { res, rej }));
-}
-async function evaluate(expr) {
-  const r = await send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true });
-  if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text);
-  return r.result.value;
-}
-// msedge.exe hands off to child processes, so killing the launcher is not enough:
-// ask the browser to quit, then sweep anything still using this run's profile.
-async function closeEdge() {
-  try {
-    const { webSocketDebuggerUrl } = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
-    const b = new WebSocket(webSocketDebuggerUrl);
-    await new Promise((res, rej) => { b.onopen = res; b.onerror = rej; });
-    b.send(JSON.stringify({ id: 1, method: "Browser.close" }));
-  } catch {}
-  await sleep(1000);
-  edge.kill();
-  if (process.platform === "win32") {
-    const leaf = profile.split(/[\\/]/).pop();
-    spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
-      `Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | ` +
-      `Where-Object { $_.CommandLine -like '*${leaf}*' } | ` +
-      `ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`]);
-  }
-}
-async function load() {
-  await send("Page.navigate", { url: PAGE });
-  await sleep(300);
-  await until(() => evaluate(`typeof PIXEL === "object" && document.readyState === "complete"`));
-}
-
-const results = [];
-async function check(name, fn) {
-  try {
-    const ok = await fn();
-    results.push([ok === true, name, ok === true ? "" : JSON.stringify(ok)]);
-  } catch (e) { results.push([false, name, String(e.message || e)]); }
-}
 const MIN = 60000;
 const near = (a, b, tol = 2000) => Math.abs(a - b) <= tol;
 const S = "PIXEL.session";
 
+let b = null;
 try {
-  ws = new WebSocket(await connect());
-  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
-  ws.onmessage = ev => {
-    const m = JSON.parse(ev.data);
-    if (m.id && pending.has(m.id)) {
-      const p = pending.get(m.id); pending.delete(m.id);
-      m.error ? p.rej(new Error(m.error.message)) : p.res(m.result);
-    } else if (m.method === "Runtime.exceptionThrown") {
-      exceptions.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);
-    }
-  };
-  await send("Runtime.enable");
-  await send("Page.enable");
+  b = await launch();
+  const evaluate = b.evaluate;
+  const load = () => b.load(pageUrl("index.html"));
+  const exceptions = b.exceptions;
+
   await load();
 
   await check("page renders and exposes PIXEL.session", async () => {
@@ -187,10 +82,10 @@ try {
   await check("pause() freezes the countdown, resume() continues", async () => {
     const a = await evaluate(`${S}.stop(), ${S}.start(25), ${S}.pause(), ${S}.get()`);
     await sleep(1500);
-    const b = await evaluate(`${S}.tick(), ${S}.get()`);
+    const bb = await evaluate(`${S}.tick(), ${S}.get()`);
     const c = await evaluate(`${S}.resume(), ${S}.get()`);
-    return a.paused === true && b.paused === true && b.kind === "focus" && near(a.leftMs, b.leftMs, 100)
-      && c.paused === false && near(c.leftMs, a.leftMs, 500) || { a, b, c };
+    return a.paused === true && bb.paused === true && bb.kind === "focus" && near(a.leftMs, bb.leftMs, 100)
+      && c.paused === false && near(c.leftMs, a.leftMs, 500) || { a, b: bb, c };
   });
 
   await check("a paused session does not advance even past its old deadline", async () => {
@@ -201,10 +96,10 @@ try {
 
   await check("extend(5) adds 5 minutes (running and paused)", async () => {
     const a = await evaluate(`${S}.get()`);
-    const b = await evaluate(`${S}.extend(5), ${S}.get()`);
+    const bb = await evaluate(`${S}.extend(5), ${S}.get()`);
     const c = await evaluate(`${S}.pause(), ${S}.extend(5), ${S}.get()`);
     await evaluate(`${S}.resume()`);
-    return near(b.leftMs - a.leftMs, 5 * MIN) && near(c.leftMs - b.leftMs, 5 * MIN) || { a, b, c };
+    return near(bb.leftMs - a.leftMs, 5 * MIN) && near(c.leftMs - bb.leftMs, 5 * MIN) || { a, b: bb, c };
   });
 
   await check("auto-start on: break end starts the next focus", async () => {
@@ -272,18 +167,9 @@ try {
 
   await check("no uncaught page exceptions", async () => exceptions.length === 0 || exceptions.slice(0, 3));
 } catch (e) {
-  results.push([false, "harness", String(e.message || e)]);
+  await check("harness", () => { throw e; });
 } finally {
-  try { ws && ws.close(); } catch {}
-  await closeEdge();
-  await sleep(500);
-  try { rmSync(profile, { recursive: true, force: true }); } catch {}
+  try { b && await b.close(); } catch {}
 }
 
-let failed = 0;
-for (const [ok, name, info] of results) {
-  if (!ok) failed++;
-  console.log(`${ok ? "PASS" : "FAIL"} ${name}${info ? "  " + info : ""}`);
-}
-console.log(failed ? `${failed} check(s) failed` : `all ${results.length} checks passed`);
-process.exit(failed ? 1 : 0);
+process.exit(report() ? 1 : 0);

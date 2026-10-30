@@ -1,0 +1,58 @@
+{
+  "index/vancouver/jan": {
+    "canvas": "45fb37a5",
+    "text": "ce9b7131"
+  },
+  "index/toronto/jan": {
+    "canvas": "c89fab45",
+    "text": "46cfb872"
+  },
+  "index/hawaii/jan": {
+    "canvas": "f11acc85",
+    "text": "8632373f"
+  },
+  "index/hongkong/jan": {
+    "canvas": "0e15cc55",
+    "text": "262d9288"
+  },
+  "index/amsterdam/jan": {
+    "canvas": "35497965",
+    "text": "ab263483"
+  },
+  "index/sydney/jan": {
+    "canvas": "1eb4c3e5",
+    "text": "30a0df01"
+  },
+  "index/vancouver/jul": {
+    "canvas": "0a60d6a5",
+    "text": "8cdd49df"
+  },
+  "index/toronto/jul": {
+    "canvas": "be50c2d5",
+    "text": "7c12b820"
+  },
+  "index/hawaii/jul": {
+    "canvas": "f01aa415",
+    "text": "ed98fd73"
+  },
+  "index/hongkong/jul": {
+    "canvas": "46224355",
+    "text": "3586564d"
+  },
+  "index/amsterdam/jul": {
+    "canvas": "fc0ced15",
+    "text": "b6862ade"
+  },
+  "index/sydney/jul": {
+    "canvas": "b7e7e775",
+    "text": "790aaec1"
+  },
+  "garden/-/jan": {
+    "canvas": "e03c6099",
+    "text": "4b9ce39a"
+  },
+  "garden/-/jul": {
+    "canvas": "e03c6099",
+    "text": "64b6cfa0"
+  }
+}

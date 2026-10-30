@@ -3960,7 +3960,6 @@ function boot(){
   gardenLink = document.getElementById("gardenLink");
   sndBtn = document.getElementById("snd");
   volInput = document.getElementById("vol");
-  if(gardenLink) gardenLink.href = "./voxel-garden/?city=" + encodeURIComponent(state.city);
   for(let i = 0; i < wxBtns.length; i++)
     if(wxBtns[i].dataset.wx === "snow") snowBtn = wxBtns[i];
 
@@ -4016,6 +4015,7 @@ function boot(){
   });
 
   loadPrefs();
+  if(gardenLink) gardenLink.href = "./voxel-garden/?city=" + encodeURIComponent(state.city);
   if(volInput) volInput.value = String(vol);
   paintSoundButton();
   if(soundWanted) armGestureStart();   // never autoplay: wait for the first gesture

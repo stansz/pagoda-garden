@@ -74,9 +74,25 @@ prototype loads Rough.js from a CDN and degrades gracefully offline.
 
 ## Tests
 
-`node tests/check-focus.mjs` drives the focus timer in a headless browser (Edge or Chrome, or set
-`BROWSER_PATH`) and needs only Node 22+. GitHub Actions runs it on every push to `main` and on pull
-requests; it checks behaviour, not how the page looks.
+All three scripts drive a headless browser (Edge or Chrome, or set `BROWSER_PATH`) over the Chrome
+DevTools Protocol and need only Node 22+, no install and no network. Run them from the repository
+root.
+
+`node tests/check-focus.mjs` checks the focus timer's behaviour in `index.html` — rounds, breaks,
+pause, extend, skip, auto-start, the progress line, the scene tint and a reload — and is run by
+GitHub Actions on every push to `main` and on pull requests.
+
+`node tests/check-pages.mjs` loads all six cities of `index.html` and `voxel-garden/index.html` with
+a stubbed weather fetch, and checks the place, clock, conditions, canvas pixels, audio profile,
+garden link, city menu, weather buttons, time slider, zoom, garden city picker and back link. It
+also runs in GitHub Actions.
+
+`node tests/check-render.mjs` is a local tool, not run in CI: it loads the same pages with a frozen
+clock, seeded randomness, a virtual animation clock and the stubbed fetch, steps a fixed number of
+frames, and compares a pixel and text hash against `tests/golden/render.json`. Its baseline was
+recorded on Windows, so it only makes sense on Windows; refresh the baseline with
+`node tests/check-render.mjs --update` only when a visual change is intended, and review the
+resulting diff like any other change.
 
 ## Credits
 
