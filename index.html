@@ -61,15 +61,34 @@
   #infoBody{padding:0 11px 9px;display:flex;flex-direction:column;gap:3px}
   #info.closed #infoBody{display:none}
   #infoBody .row{display:flex;gap:6px;align-items:baseline}
-  #infoPlay{background:transparent;border:0;color:#93a6b3;font:inherit;line-height:1;
-      padding:1px 3px;margin:0 2px 0 0;cursor:pointer;border-radius:6px;display:inline-flex;align-items:center}
-  #infoPlay:hover{color:#fff;background:rgba(255,255,255,.12)}
-  #infoPlay[data-on="true"]{color:#e8cb84}
-  #infoSession{color:#e8cb84;font-variant-numeric:tabular-nums;cursor:pointer}
-  #infoSession.break{color:#9fd0b8}
-  #infoSession.muted{color:#93a6b3}
   #infoBody .muted{color:#8798a2;font-size:11.5px;line-height:1.35}
   @media (max-width:760px){ #info{top:10px;left:10px;min-width:150px} }
+
+  /* ---- focus timer: its own pill in the bottom-right, away from the card
+     (top-left) and the island (bottom-left); the panel opens above it ---- */
+  #focus{position:fixed;right:14px;bottom:14px;z-index:6;display:flex;flex-direction:column;
+      align-items:flex-end;gap:8px;color:#e6edf1;font:12.5px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+  #focusPill,#focusPanel{background:rgba(10,14,17,.62);border:1px solid rgba(255,255,255,.13);
+      backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(0,0,0,.3)}
+  #focusPill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
+      color:#93a6b3;font-variant-numeric:tabular-nums}
+  #focusPill:hover{color:#fff;background:rgba(22,28,32,.78)}
+  #focusPill[data-kind="focus"]{color:#e8cb84;border-color:rgba(232,203,132,.38)}
+  #focusPill[data-kind="break"]{color:#9fd0b8;border-color:rgba(159,208,184,.38)}
+  #focusPill .ico{font-size:13px;line-height:1}
+  #focusPanel{width:190px;box-sizing:border-box;padding:10px 12px 12px;border-radius:12px;
+      display:flex;flex-direction:column;gap:8px}
+  #focusPanel[hidden]{display:none}
+  #focusKind{color:#8fa0a9;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
+  #focusLeft{font-size:28px;line-height:1.05;color:#c6d2d9;font-variant-numeric:tabular-nums}
+  #focusLeft.focus{color:#e8cb84}
+  #focusLeft.break{color:#9fd0b8}
+  #focusNote{color:#8798a2;font-size:11.5px;line-height:1.35;min-height:1.35em}
+  #focusLens{display:flex;gap:6px}
+  #focusLens[hidden]{display:none}
+  #focusLens button{flex:1}
+  #focusGo{width:100%}
+  @media (max-width:760px){ #focus{right:10px;bottom:10px} }
 
   /* ---- the pagoda island is a link into the voxel garden ----
      Sits under the UI (z-index 4 < bar's 5 and card's 6) so it can never eat a
@@ -106,7 +125,6 @@
   <div id="infoHead" role="button" tabindex="0" aria-expanded="true" title="Location, weather and time">
     <span id="infoPlace">Vancouver</span>
     <span id="infoClock">--:--</span>
-    <button id="infoPlay" aria-label="Start a focus session" title="Start a focus session (f)">&#9655;</button>
     <button id="infoRefresh" aria-label="Refresh weather" title="Refresh weather now">&#8635;</button>
     <span class="chev" aria-hidden="true">&#9660;</span>
   </div>
@@ -121,8 +139,23 @@
     <div class="ctl" style="margin-bottom:2px"><span class="lbl">sound</span>
       <button id="snd" aria-pressed="false" title="Ambient sound">sound</button>
       <input id="vol" type="range" min="0" max="1" step="0.01" value="0.18" aria-label="Volume"></div>
-    <div class="row" id="infoSession"></div>
   </div>
+</div>
+
+<div id="focus">
+  <div id="focusPanel" role="dialog" aria-label="Focus timer" hidden>
+    <span id="focusKind">focus</span>
+    <span id="focusLeft">50m</span>
+    <div id="focusLens" role="group" aria-label="Session length">
+      <button data-len="25" aria-pressed="false">25m</button>
+      <button data-len="50" aria-pressed="true">50m</button>
+    </div>
+    <button id="focusGo">start</button>
+    <span id="focusNote"></span>
+  </div>
+  <button id="focusPill" aria-haspopup="dialog" aria-expanded="false" data-kind="idle">
+    <span class="ico" aria-hidden="true">&#9719;</span><span id="focusPillText">focus</span>
+  </button>
 </div>
 
 <script>
@@ -3488,9 +3521,10 @@ function layoutGardenLink(){
 }
 
 /* =========================================================================
-   Focus session — a timekeeper, not a productivity app.  The card carries it;
-   no panels, no rings, no notifications.  Deadlines only (wall clock), so a
-   hidden tab or a reload lands in the right state.
+   Focus session — a timekeeper, not a productivity app.  It lives in its own
+   pill in the bottom-right (the card stays about the place); the pill opens a
+   small panel.  No rings, no notifications.  Deadlines only (wall clock), so
+   a hidden tab or a reload lands in the right state.
    ========================================================================= */
 const BASE_TITLE = (typeof document !== "undefined" && document.title) || "";
 const FOCUS_LENGTHS = [50, 25];              // click the idle row to cycle
@@ -3517,36 +3551,39 @@ function restoreSession(pr){
   session.startedAt = Number(pr.startedAt) || Date.now();
 }
 
+function sessionClock(ms){
+  return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 function paintSession(){
-  const row = document.getElementById("infoSession");
-  const play = document.getElementById("infoPlay");
+  const $ = id => document.getElementById(id);
+  const pill = $("focusPill"), panel = $("focusPanel");
   const now = Date.now();
-  let text = "";
-  let cls = "";
-  if(session.kind === "focus"){
-    text = "focus · " + sessionMinLeft() + "m";
-  }else if(session.kind === "break"){
-    text = "break · " + sessionMinLeft() + "m";
-    cls = "break";
-  }else if(session.endedAt && now - session.endedAt < 90000){
+  const kind = session.kind;
+  const left = sessionMinLeft();
+  let note = "";
+  if(kind === "focus") note = "ends " + sessionClock(session.endAt) + ", then a break";
+  else if(kind === "break") note = "back at " + sessionClock(session.endAt);
+  else if(session.endedAt && now - session.endedAt < 90000){
     const m = Math.round((now - session.endedAt) / 60000);
-    text = "break ended " + (m < 1 ? "just now" : m + "m ago");
-    cls = "muted";
-  }else{
-    text = "focus " + session.lenMin + "m";
-    cls = "muted";
+    note = "break ended " + (m < 1 ? "just now" : m + "m ago");
+  }else note = "f to start or stop";
+  if(pill){
+    pill.dataset.kind = kind;
+    $("focusPillText").textContent = kind === "focus" ? left + "m" : kind === "break" ? "break " + left + "m" : "focus";
+    pill.title = kind === "idle" ? "Focus timer" : kind + " · " + left + " min left";
+    pill.setAttribute("aria-expanded", String(!!panel && !panel.hidden));
   }
-  if(row){
-    row.textContent = text;
-    row.className = "row " + cls;
-    row.title = session.kind === "idle" ? "Start a " + session.lenMin + " minute session (click to cycle 50/25)"
-      : "Stop this session";
-  }
-  if(play){
-    play.textContent = session.kind === "idle" ? "\u25B7" : "\u23F8";
-    play.dataset.on = String(session.kind === "focus");
-    play.title = session.kind === "idle" ? "Start a focus session (f)" : "Stop (Esc)";
-    play.setAttribute("aria-label", session.kind === "idle" ? "Start a focus session" : "Stop the session");
+  if(panel){
+    $("focusKind").textContent = kind === "break" ? "break" : "focus";
+    const big = $("focusLeft");
+    big.textContent = (kind === "idle" ? session.lenMin : left) + "m";
+    big.className = kind === "idle" ? "" : kind;
+    const lens = $("focusLens");
+    lens.hidden = kind !== "idle";
+    for(const b of lens.querySelectorAll("button"))
+      b.setAttribute("aria-pressed", String(+b.dataset.len === session.lenMin));
+    $("focusGo").textContent = kind === "idle" ? "start" : kind === "focus" ? "stop" : "end break";
+    $("focusNote").textContent = note;
   }
   paintTitle();
 }
@@ -3608,26 +3645,39 @@ function toggleSession(){
   stopSession();
   return false;
 }
-function cycleSessionLength(){
-  if(session.kind !== "idle") return;
-  session.lenMin = session.lenMin === 50 ? 25 : 50;
+function setSessionLength(min){
+  if(session.kind !== "idle" || !FOCUS_LENGTHS.includes(min)) return;
+  session.lenMin = min;
   session.endedAt = 0;                         // the new length is what you should see
   paintSession();
   try{ savePrefs(); }catch(e){}
 }
 (function wireSession(){
-  const play = document.getElementById("infoPlay");
-  const row = document.getElementById("infoSession");
-  if(play) play.addEventListener("click", e => { e.stopPropagation(); toggleSession(); });
-  if(row) row.addEventListener("click", e => {
-    e.stopPropagation();
-    if(session.kind === "idle") cycleSessionLength(); else stopSession();
+  const wrap = document.getElementById("focus");
+  const pill = document.getElementById("focusPill");
+  const panel = document.getElementById("focusPanel");
+  const setOpen = open => { if(panel){ panel.hidden = !open; paintSession(); } };
+  if(pill) pill.addEventListener("click", () => setOpen(panel.hidden));
+  const go = document.getElementById("focusGo");
+  if(go) go.addEventListener("click", () => {
+    if(session.kind === "break") advanceSession(); else toggleSession();
+    paintSession();
   });
+  const lens = document.getElementById("focusLens");
+  if(lens) lens.addEventListener("click", e => {
+    const b = e.target.closest("button[data-len]");
+    if(b) setSessionLength(+b.dataset.len);
+  });
+  // a click anywhere else puts the panel away
+  addEventListener("pointerdown", e => { if(wrap && !wrap.contains(e.target)) setOpen(false); });
   addEventListener("keydown", e => {
     const t = e.target;
     if(t && /input|textarea|select/i.test(t.tagName || "")) return;
     if(e.key === "f" || e.key === "F"){ e.preventDefault(); toggleSession(); }
-    else if(e.key === "Escape"){ if(session.kind !== "idle"){ e.preventDefault(); stopSession(); } }
+    else if(e.key === "Escape"){
+      if(panel && !panel.hidden){ e.preventDefault(); setOpen(false); }
+      else if(session.kind !== "idle"){ e.preventDefault(); stopSession(); }
+    }
   });
   addEventListener("pagehide", () => { try{ savePrefs(); }catch(e){} });
   paintSession();
@@ -3754,8 +3804,7 @@ function boot(){
   if(volInput) volInput.value = String(vol);
   paintSoundButton();
   if(soundWanted) armGestureStart();   // never autoplay: wait for the first gesture
-  
-setInterval(updateInfo, 1000);
+  setInterval(updateInfo, 1000);
   setInterval(() => { if(!state.own && state.wxAuto) refreshWeather(); }, 15 * 60 * 1000);
   requestAnimationFrame(tick);
 }
@@ -3863,7 +3912,7 @@ const PIXEL = {
     stop(){ stopSession(); },
     tick(){ tickSession(); },
     endIn(ms){ session.endAt = Date.now() + Math.max(0, ms); },
-    row(){ const r = document.getElementById("infoSession"); return r ? r.textContent : null; }
+    row(){ const r = document.getElementById("focusPillText"); return r ? r.textContent : null; }
   },
   selectCity(id){ if(CITY_BY_ID[id]) setCity(id, true); return state.city; }
 };
