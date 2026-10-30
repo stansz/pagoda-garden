@@ -321,4 +321,4 @@ function updateWeather(dt){
     if(f.x < -0.05) f.x = 1.05; else if(f.x > 1.05) f.x = -0.05;
   }
 }
-
+

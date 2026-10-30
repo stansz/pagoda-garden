@@ -66,4 +66,4 @@
   button{font:inherit;color:#cfdae2;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
       border-radius:9px;padding:5px 9px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
   button:hover{background:rgba(255,255,255,.13);color:#fff}
-  button[aria-pressed="true"]{background:rgba(232,203,132,.18);border-color:rgba(232,203,132,.45);color:#f4e2b4}
+  button[aria-pressed="true"]{background:rgba(232,203,132,.18);border-color:rgba(232,203,132,.45);color:#f4e2b4}

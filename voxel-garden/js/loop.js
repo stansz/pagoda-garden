@@ -103,4 +103,4 @@ function tick(now){
 }
 
 resize();
-requestAnimationFrame(tick);
+requestAnimationFrame(tick);

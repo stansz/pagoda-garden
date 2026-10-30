@@ -182,4 +182,4 @@ function updateAudio(){
   rainGain.gain.setTargetAtTime(rainAmt * 0.08, t, 0.8);
   airGain.gain.setTargetAtTime(0.035 + snowAmt * 0.025 + rainAmt * 0.015, t, 1.0);
 }
-
+

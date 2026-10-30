@@ -263,4 +263,4 @@ if(queryKey){
 }
 selectPlace(startIx);
 setTimeout(() => { hint.style.opacity = "0"; }, 14000);
-
+
