@@ -7,7 +7,7 @@ import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const BROWSER = [
+export const BROWSER = [
   process.env.BROWSER_PATH,
   "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
   "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
@@ -20,7 +20,10 @@ const BROWSER = [
 ].filter(Boolean).find(p => existsSync(p));
 if (!BROWSER) { console.error("FAIL browser: no Edge or Chrome found (set BROWSER_PATH)"); process.exit(2); }
 
-const PORT = 9333;
+export const PORT = 9333;
+// CHECK_ATTACH=1 uses the browser tests/start-browser.mjs already started, one new
+// tab per run, for shells that cannot start a browser themselves (a sandboxed agent)
+const ATTACH = process.env.CHECK_ATTACH === "1";
 
 export const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -39,25 +42,39 @@ export function pageUrl(relPath) {
   return new URL("../" + relPath, import.meta.url).href;
 }
 
-export async function launch() {
-  // a browser still on this port would be tested instead of the one launched here
-  if (await fetch(`http://127.0.0.1:${PORT}/json/version`).then(() => true, () => false)) {
-    console.error(`FAIL harness: port ${PORT} is already in use by another browser`);
-    process.exit(2);
-  }
-  const profile = mkdtempSync(join(tmpdir(), "pagoda-check-"));
-  const edge = spawn(BROWSER, [
+export function browserArgs(profile) {
+  return [
     ...(process.env.CI ? ["--no-sandbox"] : []),   // CI containers have no user namespaces
     "--headless=new", `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`,
     "--no-first-run", "--no-default-browser-check", "--window-size=1280,800",
     "--autoplay-policy=no-user-gesture-required", "about:blank",
-  ], { stdio: "ignore" });
+  ];
+}
 
-  let ws, nextId = 1;
+export async function launch() {
+  const running = await fetch(`http://127.0.0.1:${PORT}/json/version`).then(() => true, () => false);
+  if (ATTACH && !running) {
+    console.error(`FAIL harness: CHECK_ATTACH=1 but no browser on port ${PORT}; run node tests/start-browser.mjs`);
+    process.exit(2);
+  }
+  // a browser still on this port would be tested instead of the one launched here
+  if (!ATTACH && running) {
+    console.error(`FAIL harness: port ${PORT} is already in use by another browser`);
+    process.exit(2);
+  }
+  const profile = ATTACH ? null : mkdtempSync(join(tmpdir(), "pagoda-check-"));
+  const edge = ATTACH ? null : spawn(BROWSER, browserArgs(profile), { stdio: "ignore" });
+
+  let ws, nextId = 1, tabId = null;
   const pending = new Map();
   const exceptions = [];
 
   async function connect() {
+    if (ATTACH) {
+      const tab = await (await fetch(`http://127.0.0.1:${PORT}/json/new?about:blank`, { method: "PUT" })).json();
+      tabId = tab.id;
+      return tab.webSocketDebuggerUrl;
+    }
     for (let i = 0; i < 50; i++) {
       try {
         const list = await (await fetch(`http://127.0.0.1:${PORT}/json/list`)).json();
@@ -104,6 +121,10 @@ export async function launch() {
   // ask the browser to quit, then sweep anything still using this run's profile.
   async function close() {
     try { ws && ws.close(); } catch {}
+    if (ATTACH) {
+      try { await fetch(`http://127.0.0.1:${PORT}/json/close/${tabId}`); } catch {}
+      return;
+    }
     try {
       const { webSocketDebuggerUrl } = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
       const b = new WebSocket(webSocketDebuggerUrl);

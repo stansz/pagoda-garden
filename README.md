@@ -94,6 +94,9 @@ recorded on Windows, so it only makes sense on Windows; refresh the baseline wit
 `node tests/check-render.mjs --update` only when a visual change is intended, and review the
 resulting diff like any other change.
 
+A shell that cannot start a browser, such as a sandboxed agent, can run `node tests/start-browser.mjs`
+from a normal shell first, then run the checks with `CHECK_ATTACH=1`. `--stop` shuts that browser down.
+
 ## Credits
 
 - Conditions by [Open-Meteo](https://open-meteo.com/).
