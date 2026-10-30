@@ -1,229 +1,158 @@
-# Focus timer: pomodoro rounds, pause/extend/skip, on-screen cues
+# Expand headless checks to all cities and the garden, and record a render baseline
 
 ## Goal
 
-Extend the focus timer in `index.html` (a single self-contained HTML page: inline CSS + one inline
-`<script>`, no build step, no dependencies) with:
+Add test coverage for `index.html` (six cities) and `voxel-garden/index.html`, plus a pixel-and-text
+baseline of both pages taken from the current code. A later refactor must reproduce this baseline
+exactly. This task changes tests only: no page changes.
 
-1. Pomodoro rounds: 4 focus rounds per cycle, a short break after rounds 1–3, a long break after round 4.
-2. Pause / resume, `+5m` extend, `skip break`, and an optional "auto-start next focus" toggle.
-3. Two on-screen focus/break cues: a thin progress line along the bottom edge of the window, and a
-   slight eased tint of the pixel scene (cooler/dimmer in focus, warmer in a break).
-
-`node .handoff/check-focus.mjs` must exit 0 when done.
+Environment: Node 22+, no npm dependencies, no `package.json`. Browser driven over the Chrome
+DevTools Protocol with Node's global `fetch` and `WebSocket`. Pages load from `file://`.
 
 ## Files to touch
 
-- `index.html` — all code changes.
-- `README.md` — update the `| Focus timer | ... |` row in the "City view" controls table.
-- `docs/BUILD-LOG.md` — append one entry before `## Things deliberately not done`.
+- `tests/browser.mjs` (new)
+- `tests/check-focus.mjs`
+- `tests/check-pages.mjs` (new)
+- `tests/check-render.mjs` (new)
+- `tests/golden/render.json` (new, generated)
+- `.github/workflows/check.yml`
+- `README.md` (the `## Tests` section only)
 
 ## Steps
 
-All code below lives in `index.html`. The existing timer is the block starting with the comment
-`Focus session — a timekeeper, not a productivity app.` and ending with the `wireSession` IIFE, plus
-its CSS (`/* ---- focus timer: ...`), its markup (`<div id="focus">`), and `PIXEL.session` near the
-end of the script. Keep the existing code style: 2-space indent, terse comments, `const`/`function`
-declarations, no classes, no frameworks, no new external files.
+### 1. `tests/browser.mjs`
 
-### 1. Lengths and state
+Move the browser plumbing out of `tests/check-focus.mjs` into this module, unchanged in behaviour:
+the browser path list, the `BROWSER_PATH` override, the `--no-sandbox` flag when `process.env.CI` is
+set, the port-in-use guard on port 9333, the temp profile, `sleep`, `until`, and the `closeEdge`
+shutdown (`Browser.close`, then `edge.kill()`, then the Windows sweep by profile name), renamed
+`close`.
 
-Replace `FOCUS_LENGTHS` / `BREAK_MIN` with:
+Export `sleep`, `until`, and `async function launch()` returning:
 
-```js
-const FOCUS_LENGTHS = [25, 50];
-const BREAKS = { 25: { short: 5, long: 15 }, 50: { short: 10, long: 20 } };
-const ROUNDS = 4;
-const CYCLE_IDLE_RESET = 60 * 60000;   // idle longer than this between rounds -> cycle starts over
-```
+- `send(method, params)` — raw CDP call.
+- `evaluate(expr)` — `Runtime.evaluate` with `awaitPromise` and `returnByValue`; throws on exception.
+- `load(url, { prelude } = {})` — if `prelude` is a string, install it with
+  `Page.addScriptToEvaluateOnNewDocument` (removing any prelude from an earlier `load` first), then
+  `Page.navigate`, then wait until `document.readyState === "complete"`.
+- `exceptions` — array of uncaught page exception strings, collected from `Runtime.exceptionThrown`.
+- `close()`.
 
-Extend the `session` object to:
+Also export `pageUrl(relPath)` returning `new URL("../" + relPath, import.meta.url).href`.
 
-```js
-const session = { kind: "idle", breakType: "", lenMin: 50, endAt: 0, startedAt: 0, totalMs: 0,
-                  paused: false, pausedLeft: 0, completed: 0, autoStart: false, marks: 0, endedAt: 0 };
-```
+### 2. `tests/check-focus.mjs`
 
-- `kind`: `"idle" | "focus" | "break"` (unchanged values).
-- `breakType`: `"short" | "long"` while `kind === "break"`, else `""`.
-- `totalMs`: full length of the current focus/break in ms (grows with extend).
-- `completed`: focus rounds completed in the current cycle, `0..4`.
-- Current round number (1-based) = `Math.min(completed + 1, ROUNDS)` while idle or in focus; during
-  a break it is the round just finished (`completed`, min 1).
-- `marks`: keep incrementing per completed focus (lifetime count, already persisted).
+Rewrite it to use `tests/browser.mjs`. Keep all 20 checks and their names, and the output format:
+one `PASS name` / `FAIL name  detail` line per check, then `all N checks passed` or
+`N check(s) failed`, exit 0 only when all pass.
 
-Add `sessionLeftMs()` returning `session.paused ? session.pausedLeft : Math.max(0, session.endAt - Date.now())`
-and make `sessionMinLeft()` use it (`Math.ceil(sessionLeftMs() / 60000)`).
+### 3. `tests/check-pages.mjs`
 
-### 2. Transitions
+Same output format and exit rule. Export nothing; put a shared `check(name, fn)` / results printer
+in `tests/browser.mjs` and use it from both scripts.
 
-Rewrite the transition functions with these exact behaviours:
-
-- `startSession(min)`: only from idle. If `session.endedAt && Date.now() - session.endedAt > CYCLE_IDLE_RESET`,
-  set `completed = 0`. Set `lenMin` (if `min` is in `FOCUS_LENGTHS`), `kind = "focus"`, `breakType = ""`,
-  `paused = false`, `totalMs = lenMin * 60000`, `startedAt = now`, `endAt = now + totalMs`, `endedAt = 0`.
-- `advanceSession()` (called when a deadline passes, never while paused):
-  - focus → `completed++`, `marks++`; `breakType = completed >= ROUNDS ? "long" : "short"`;
-    `kind = "break"`; `totalMs = BREAKS[lenMin][breakType] * 60000` (fallback `{short:5,long:15}` if
-    `lenMin` has no entry); `startedAt = now`; `endAt = now + totalMs`; `playCadence()`.
-  - break → if `breakType === "long"` set `completed = 0`. Then if `autoStart`: start the next focus
-    directly (same as `startSession()` but without the idle-reset check). Otherwise `kind = "idle"`,
-    `breakType = ""`, `endAt = 0`, `totalMs = 0`, `endedAt = now`.
-  - Always `savePrefs()` at the end (wrapped in try/catch like today).
-- `stopSession()`: back to idle and **reset the cycle** (`completed = 0`), `paused = false`, `breakType = ""`,
-  `endAt = 0`, `totalMs = 0`, `endedAt = 0`.
-- `pauseSession()`: only when `kind !== "idle"` and not paused: `pausedLeft = max(0, endAt - now)`, `paused = true`.
-- `resumeSession()`: only when paused: `endAt = now + pausedLeft`, `paused = false`, `pausedLeft = 0`.
-- `extendSession(min = 5)`: only when `kind !== "idle"`: add `min * 60000` to `totalMs` and to
-  `pausedLeft` (if paused) or `endAt` (if running).
-- `skipBreak()`: only when `kind === "break"`: if `breakType === "long"` set `completed = 0`; then start the
-  next focus directly (no idle-reset check), keeping `lenMin`.
-- `setAutoStart(on)`: `session.autoStart = !!on`; repaint; save.
-- `tickSession()`: advance only if `kind !== "idle" && !paused && endAt && now >= endAt`; then `paintSession()`.
-- Every state-changing function calls `paintSession()` and `savePrefs()` (try/catch).
-
-### 3. Persistence
-
-- `sessionSave()` returns `{ kind, breakType, lenMin, endAt, startedAt, totalMs, paused, pausedLeft, completed, autoStart, marks }`.
-- `restoreSession(pr)` restores all of those with type checks. `autoStart` and `lenMin` and `marks` and
-  `completed` (integer 0..4) restore always. A running (not paused) session whose `endAt` is more than
-  2 minutes in the past goes idle (existing rule). A paused session restores as paused if it was saved
-  less than 12 hours ago — store `savedAt: Date.now()` in `sessionSave()` and check it; otherwise idle.
-- `savePrefs()` / `loadPrefs()` already call these; leave that wiring as is.
-
-### 4. Panel markup and CSS
-
-Replace the inside of `<div id="focusPanel" ...>` with (keep the `role`/`aria-label`/`hidden` on the panel):
-
-```html
-<div class="fp-top"><span id="focusKind">focus</span><span id="focusRounds" aria-label="Round 1 of 4"></span></div>
-<span id="focusLeft">50m</span>
-<div id="focusLens" role="group" aria-label="Session length">
-  <button data-len="25" aria-pressed="false">25m</button>
-  <button data-len="50" aria-pressed="true">50m</button>
-</div>
-<div id="focusCtl">
-  <button id="focusPause">pause</button>
-  <button id="focusMore" title="Add 5 minutes">+5m</button>
-</div>
-<button id="focusGo">start</button>
-<label id="focusAuto"><input type="checkbox" id="focusAutoBox"> auto-start next focus</label>
-<span id="focusNote"></span>
-```
-
-`paintSession()` fills `#focusRounds` with exactly 4 `<span class="dot">` children (create them once,
-then only toggle classes): class `done` for indexes `< completed`, class `now` for the current round
-while `kind === "focus"`.
-
-CSS (add next to the existing `#focus...` rules, same palette: gold `#e8cb84`, green `#9fd0b8`,
-muted `#8798a2` / `#8fa0a9`):
-
-- `.fp-top{display:flex;justify-content:space-between;align-items:center}`
-- `#focusRounds{display:inline-flex;gap:4px}`; `#focusRounds .dot{width:6px;height:6px;border-radius:50%;border:1px solid rgba(255,255,255,.3)}`;
-  `.dot.done{background:#e8cb84;border-color:#e8cb84}`; `.dot.now{border-color:#e8cb84;box-shadow:0 0 0 2px rgba(232,203,132,.18)}`.
-- `#focusCtl{display:flex;gap:6px}`, `#focusCtl button{flex:1}`, `#focusCtl[hidden]{display:none}`.
-- `#focusAuto{display:flex;align-items:center;gap:6px;color:#8fa0a9;font-size:11.5px;cursor:pointer}`, `#focusAuto[hidden]{display:none}`.
-- `#focusLeft.paused{opacity:.55}`; `#focusPill[data-paused="true"]{opacity:.7}`.
-
-### 5. Painting rules (`paintSession()`)
-
-- `#focusKind` text: idle → `focus`; focus → `focus · round N of 4`; break → `short break` or `long break`;
-  append ` · paused` when paused.
-- `#focusLeft`: idle → `lenMin + "m"`; otherwise minutes left + `"m"`; classes `focus`/`break` as today plus `paused`.
-- `#focusLens` visible only when idle. `#focusAuto` visible only when idle; checkbox reflects `autoStart`.
-- `#focusCtl` visible only when not idle; `#focusPause` text `pause` / `resume`.
-- `#focusGo` text: idle → `start`; focus → `stop`; break → `skip break`.
-  Click: idle → start; focus → stop; break → `skipBreak()`.
-- `#focusNote`:
-  - focus running → `ends HH:MM, then a 5m break` (use the real next break type and length;
-    for the 4th round say `long break`, e.g. `then a 15m long break`).
-  - break running → `back at HH:MM` when auto-start is off, `next focus at HH:MM` when on.
-  - paused → `paused · N min left`.
-  - idle within 90 s of a break ending → existing `break ended …` text; otherwise idle →
-    `round N of 4 · f to start` (N = next round).
-  - `HH:MM` uses the existing `sessionClock(ms)`.
-- Pill text (`#focusPillText`): idle → `focus`; focus → `Nm`; short break → `break Nm`; long break → `long break Nm`.
-  Set `pill.dataset.kind` as today and `pill.dataset.paused = String(session.paused)`.
-- Tab title (`paintTitle()`): unchanged format, plus prefix `‖ ` when paused.
-
-### 6. Progress line
-
-- Markup: add `<div id="focusLine" aria-hidden="true" hidden></div>` directly after `<div id="focus">…</div>`.
-- CSS: `#focusLine{position:fixed;left:0;bottom:0;height:3px;width:0;z-index:5;pointer-events:none;background:#e8cb84;opacity:.75;transition:width 1s linear,background .6s,opacity .6s}`,
-  `#focusLine[data-kind="break"]{background:#9fd0b8}`, `#focusLine.paused{opacity:.3}`, `#focusLine[hidden]{display:none}`.
-- `paintSession()` sets: hidden when idle; otherwise `dataset.kind = session.kind`,
-  `style.width = (progress * 100).toFixed(2) + "%"`, class `paused` when paused.
-- `progress` = `totalMs > 0 ? clamp(1 - sessionLeftMs() / totalMs, 0, 1) : 0` (use the existing `clamp` helper).
-- Add `@media (prefers-reduced-motion: reduce){ #focusLine{transition:none} }`.
-
-### 7. Scene tint
-
-- Add module-level `const sessionTint = { focus: 0, brk: 0 };` inside the focus-session block.
-- In `grade(m)` (the `/* --- grade */` section), right before the final
-  `b.globalCompositeOperation = "source-over";`, ease and apply:
-  - targets: focus running → `{focus: 0.12, brk: 0}`; break running → `{focus: 0, brk: 0.05}`; idle → both 0;
-    paused → half of the running targets.
-  - ease each value per call: `v += (target - v) * 0.03`.
-  - apply focus with `multiply`: `rgba(168,182,206,focus)` full-frame `fillRect(0,0,BW,BH)` when `focus > 0.002`.
-  - apply break with `lighter`: `rgba(255,224,170,brk)` full-frame when `brk > 0.002`.
-  - restore `b.globalCompositeOperation` correctly so the existing final `source-over` line still runs last.
-- `grade()` runs from the frame loop after the script has fully evaluated, so referencing `session` /
-  `sessionTint` there is safe; do **not** use `typeof session` guards (a `const` in TDZ throws on `typeof`).
-- In `updateAudio()`, the existing `phase` expression must treat paused as neutral:
-  `session.paused ? 1 : (existing expression)`.
-
-### 8. Wiring
-
-In the `wireSession` IIFE:
-- `#focusPause` click → pause/resume toggle. `#focusMore` click → `extendSession(5)`.
-- `#focusAutoBox` change → `setAutoStart(checkbox.checked)`.
-- `#focusGo` click per step 5.
-- Keys (same input/textarea/select guard as today): `f` start/stop (unchanged); `p` pause/resume when not idle;
-  `Escape` unchanged (close panel if open, else stop).
-- The existing outside-click close and `pagehide` save stay.
-
-### 9. `PIXEL.session` test API
-
-Replace the `session: { ... }` object inside `const PIXEL = { ... }` with:
+Every load uses this prelude, so no check depends on the network:
 
 ```js
-session: {
-  get(){ return { kind: session.kind, breakType: session.breakType, lenMin: session.lenMin,
-                  leftMs: sessionLeftMs(), totalMs: session.totalMs,
-                  progress: session.totalMs > 0 ? clamp(1 - sessionLeftMs() / session.totalMs, 0, 1) : 0,
-                  paused: session.paused, completed: session.completed, round: <current round per step 1>,
-                  rounds: ROUNDS, autoStart: session.autoStart, marks: session.marks, title: document.title }; },
-  start(min){ return startSession(min); },
-  stop(){ stopSession(); },
-  tick(){ tickSession(); },
-  endIn(ms){ session.endAt = Date.now() + Math.max(0, ms); if(session.paused) session.pausedLeft = Math.max(0, ms); },
-  pause(){ pauseSession(); }, resume(){ resumeSession(); },
-  extend(min){ extendSession(min); }, skip(){ skipBreak(); },
-  setAutoStart(on){ setAutoStart(on); },
-  tint(){ return { focus: sessionTint.focus, brk: sessionTint.brk }; },
-  row(){ const r = document.getElementById("focusPillText"); return r ? r.textContent : null; }
-},
+window.fetch = () => Promise.resolve(new Response(JSON.stringify(
+  { current: { weather_code: 3, temperature_2m: 7, cloud_cover: 80 } }),
+  { status: 200, headers: { "Content-Type": "application/json" } }));
 ```
 
-### 10. Docs
+Use `until` (never fixed waits) for anything that needs a frame or the stubbed fetch. "Canvas lit"
+means: read `#scene` with `getImageData`, sample every 97th pixel, and at least 20 samples have
+R+G+B > 30.
 
-- `README.md`: replace the `| Focus timer | ... |` row with one row describing: the `◷ focus` pill opens the
-  panel; 25 or 50 minute focus in rounds of 4 with short breaks (5/10) and a long break (15/20) after the
-  4th; pause, `+5m`, skip break, optional auto-start; `f` start/stop, `p` pause, `Esc` closes the panel;
-  a thin line along the bottom edge fills gold in focus and green in a break, and the scene tints slightly.
-- `docs/BUILD-LOG.md`: add `## Oct 30 — pomodoro rounds and on-screen cues` with 3–5 sentences in the
-  existing log voice, placed directly before `## Things deliberately not done`.
+City page checks, one named check per city (`vancouver`, `toronto`, `hawaii`, `hongkong`,
+`amsterdam`, `sydney`), each loading `index.html?city=<id>` and asserting all of:
+
+- `PIXEL.state.city === id`
+- `#infoPlace` text equals `PIXEL.record(id).name`
+- `#infoClock` text matches `/^\d\d:\d\d$/`
+- `#infoCond` text is `Overcast` and `#infoTemp` text contains `7`
+- canvas lit
+- `PIXEL.audioProfile(id).chords.length > 0`
+- `#gardenLink` `href` contains `city=<id>`
+
+Further checks:
+
+- `city menu`: on `index.html?city=vancouver`, click `#cityBtn`, then click
+  `#cityMenu button[data-city="sydney"]`; `PIXEL.state.city` is `sydney` and `#infoPlace` is `Sydney`.
+- `garden renders`: on `voxel-garden/index.html`, canvas lit and `#infoPlace` is `Own time`.
+- `garden weather buttons`: click `[data-wx="rain"]`; its `aria-pressed` is `true` and
+  `[data-wx="clear"]`'s is `false`.
+- `garden time slider`: set `#hour` value to `12`, dispatch a bubbling `input` event; `#clock` is `12:00`.
+- `garden zoom`: click `#zin` and `#zout`; no exception.
+- `garden city`: click `[data-place="5"]`; `#infoPlace` is `Sydney` (use `until`).
+- `garden back link`: load `voxel-garden/index.html?city=sydney`; `#backCity` has `hidden === false`.
+- `no uncaught page exceptions`: last check; `exceptions` is empty across all loads.
+
+Load each page with a fresh `load` per check group, and clear `localStorage` before each load with
+`try{localStorage.clear()}catch(e){}` in the prelude, so checks do not affect each other.
+
+### 4. `tests/check-render.mjs`
+
+Deterministic render comparison. Usage: `node tests/check-render.mjs` compares against
+`tests/golden/render.json`; `node tests/check-render.mjs --update` rewrites that file.
+
+Set the viewport with `Emulation.setDeviceMetricsOverride` to 1280×800, deviceScaleFactor 1, and the
+zone with `Emulation.setTimezoneOverride` to `UTC`, before any load.
+
+Prelude for every load, parameterised by epoch ms `T`:
+
+- `Date` replaced by a subclass: no-argument construction gives `T`; `Date.now()` returns `T`;
+  arguments pass through.
+- `Math.random` replaced by a mulberry32 generator seeded with the constant `0x9e3779b9`.
+- `performance.now()` returns a virtual clock `__t`, starting at 1000.
+- `window.requestAnimationFrame` queues callbacks and never fires by itself.
+  `window.__step(n)` repeats `n` times: `__t += 16`, take the queue, call each with `__t`.
+- `window.fetch` is the stub from step 3.
+- `localStorage` cleared in a try/catch.
+
+For each entry: `load`, wait 1500 ms with `sleep` so timers and the stubbed fetch settle, call
+`__step(60)`, then compute:
+
+- `canvas`: FNV-1a 32-bit hash, as 8 hex digits, of all `getImageData` bytes of `#scene`.
+- `text`: FNV-1a 32-bit hash of `document.body.innerText`.
+
+Entries, keyed `<page>/<city>/<season>`, 14 in all:
+
+- `T` for `jan`: `2026-01-15T20:00:00Z`. `T` for `jul`: `2026-07-15T04:00:00Z`.
+- `index.html?city=<id>` for all six ids at both instants.
+- `voxel-garden/index.html` at both instants, keyed `garden/-/jan` and `garden/-/jul`.
+
+`render.json` is a JSON object of key → `{ canvas, text }`, pretty-printed with 2 spaces, keys in the
+order above. On compare, print `PASS key` or `FAIL key  expected … got …` per entry, then
+`all 14 renders match` or `N render(s) differ`, exit 0 only if all match. A missing golden file
+exits 2 with a message naming `--update`.
+
+Generate `tests/golden/render.json` with `--update` from the current pages, then run the compare.
+
+### 5. CI
+
+In `.github/workflows/check.yml`, keep the existing steps and add `- run: node tests/check-pages.mjs`
+after the focus check. Do not add `check-render.mjs` to CI: its golden file is produced on Windows.
+
+### 6. README
+
+Rewrite the `## Tests` section to list the three scripts in one short paragraph each: what it covers,
+how to run it, and that `check-render.mjs` is a local tool, not run in CI, whose baseline is refreshed
+with `--update` only when a visual change is intended.
 
 ## Acceptance
 
-Run from the repository root (`C:/Users/sz/Code/pagoda-garden`):
+Run from the repository root.
 
-1. `node .handoff/check-focus.mjs` — exits 0 and its last line is `all 20 checks passed`.
-2. `git status --porcelain` — lists only `M index.html`, `M README.md`, `M docs/BUILD-LOG.md`
-   (plus `.handoff/` entries if untracked).
-3. `git diff --stat -- . ":(exclude).handoff"` — touches exactly `index.html`, `README.md`, `docs/BUILD-LOG.md`.
-4. `grep -c "focusLine" index.html` — prints a number ≥ 3.
-5. `grep -n "typeof session" index.html` — prints nothing (exit 1).
+1. `node tests/check-focus.mjs` — exits 0, last line `all 20 checks passed`.
+2. `node tests/check-pages.mjs` — exits 0, last line `all 14 checks passed`.
+3. `node tests/check-render.mjs` — exits 0, last line `all 14 renders match`.
+4. `node tests/check-render.mjs` — run a second time: exits 0, last line `all 14 renders match`.
+5. `node -e "const g=Object.values(require('./tests/golden/render.json'));const c=new Set(g.map(x=>x.canvas));console.log(g.length,c.size)"` — prints `14 14`.
+6. `git diff --exit-code -- index.html voxel-garden proto docs` — exits 0.
+7. `git status --porcelain -- . ":(exclude).handoff"` — lists only `.github/workflows/check.yml`,
+   `README.md`, `tests/check-focus.mjs`, and untracked `tests/browser.mjs`, `tests/check-pages.mjs`,
+   `tests/check-render.mjs`, `tests/golden/`.
 
 ## Parallel work
 
@@ -233,20 +162,23 @@ None — do it sequentially.
 
 - Do not commit, push, or switch branches.
 - Do not touch files outside **Files to touch** except `.handoff/report.md`.
-- Do not modify `.handoff/check-focus.mjs` or `.handoff/plan.md`.
-- No new files, no external scripts/CDNs, no dependencies, no build step; the page must keep working from `file://`.
-- Do not change any city art, weather, audio (other than the one `phase` line), or corner-card code.
-- Keep all existing behaviour not mentioned here (outside-click close, `Esc`, title countdown, cadence pluck, wall-clock deadlines).
+- Do not change `index.html`, `voxel-garden/`, `proto/` or `docs/`, even to make a check pass.
+- No npm dependencies, no `package.json`, no new tooling.
+- Every script must work from any working directory, on Windows with Edge and on Linux with Chrome.
+- Every script must leave no browser processes behind.
+- Do not weaken a check to make it pass. Do not remove any of the 20 focus checks.
 
 ## Out of scope
 
-- Custom/free-form durations or stepper settings (only the 25 and 50 presets).
-- Notifications, sounds beyond the existing cadence pluck, stats/streaks/history.
-- Changes to `voxel-garden/`, `proto/`, or the refactor into multiple files.
+- Splitting the pages into multiple files (a later handoff).
+- Fixing any bug these checks reveal.
+- Screenshot images or visual diff tooling.
+- Testing audio output or the focus timer beyond the existing 20 checks.
 
 ## If blocked
 
-If a step cannot be done as written (an anchor named here is missing, a check in
-`.handoff/check-focus.mjs` contradicts this plan, or Edge cannot launch), stop, leave the working
-tree as it is, and write in `.handoff/report.md`: which step, the exact error or mismatch, and what
-you would need to proceed. Do not improvise around it.
+If a check fails because a page behaves differently from this plan (a selector, text or URL parameter
+is not as written), or two consecutive `check-render.mjs` runs disagree, stop. Leave the working tree
+as it is and write in `.handoff/report.md`: which check, the expected and actual values, and which
+part of the render differs if it is a render. Do not change the page, and do not loosen or skip the
+check.
