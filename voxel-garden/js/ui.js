@@ -205,6 +205,7 @@ infoRefresh.addEventListener("click", e => {
 setInterval(() => {
   hour = localHour(PLACES[placeIx].tz);
   updateInfo();
+  tickPlants();
 }, 1000);
 setInterval(() => { if(wxAuto) refreshPlaceWeather(); }, 15 * 60 * 1000);
 
@@ -262,5 +263,6 @@ if(queryKey){
   if(qix >= 0) startIx = qix;
 }
 selectPlace(startIx);
+initPlants();
 setTimeout(() => { hint.style.opacity = "0"; }, 14000);
 

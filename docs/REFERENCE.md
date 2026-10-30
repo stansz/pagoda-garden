@@ -8,7 +8,7 @@ index.html            pixel city view — the front page (markup, stylesheet and
 city/                 pixel city view code: city.css + one classic script per concern,
                       with one file per city under city/cities/
 voxel-garden/index.html     voxel pagoda garden (markup, stylesheet and script tags)
-voxel-garden/js/      the garden's classic scripts (world, render, audio, ui, loop)
+voxel-garden/js/      the garden's classic scripts (world, render, audio, plants, ui, loop)
 voxel-garden/garden.css     the garden's stylesheet
 shared/               code both pages load: time.js, weather.js, audio.js
 proto/index.html      archive index for the two losing prototypes
@@ -206,6 +206,16 @@ pinch, `+` / `-` keys and double-click still work over the canvas.
 `?city=<id>` (from the city page) or a referrer matching the site root shows a top-right
 `← back to the city` pill linking `../?city=<id>`; opened on its own, the pill is never
 rendered or focusable.
+
+### Plants
+
+Seeds are the city page's lifetime `session.marks` minus the garden's `spent`, both read from
+`localStorage` (`pagoda-garden.plants.v1` holds `{ spent, plants }`, `pagoda-pixel-window.v1` holds
+the marks). A plant is a sprout for 6 h, a stem with a sprout for 18 h more, then grown at 24 h; rain
+adds its elapsed time to the plant's `rain` (saved too) and so grows it faster. Poppies bloom any time,
+moonflowers only at night (20:00–05:00) and snowdrops only in snow; a grown plant otherwise shows a
+bud. The voxel scene is rebuilt only when `refreshPlants` sees a plant's stage or open/closed state
+change.
 
 ---
 

@@ -36,10 +36,11 @@ The city page also reads `?city=<id>`, so links can land on a specific city.
 | Zoom | wheel, pinch, `+` / `-` buttons, `+` / `-` keys, double-click to reset |
 | Time and weather | *not controls* — the garden always follows its city's real clock and sky |
 | City | the `city` row in the card; `?city=<id>` lands on one, otherwise the last one you chose, otherwise Vancouver |
+| Seeds | each finished focus round in the city earns one; the `seeds` pill picks what to plant, then tap the grass |
 | Ambience | `sound` (browsers need one click), volume slider |
 | Back | a `← back to the city` pill appears when you arrive from the city view |
 
-Location, volume, sound preference, zoom and card state are remembered in `localStorage`;
+Location, volume, sound preference, zoom, card state, plants and seeds spent are remembered in `localStorage`;
 a remembered `sound on` waits for the first click before starting, because browsers require a gesture.
 
 ## How it is built
@@ -65,7 +66,7 @@ index.html            pixel city view (main page): markup, stylesheet and script
 city/                 pixel city view code: city.css + one classic script per concern,
                       with one file per city under city/cities/
 voxel-garden/index.html     voxel garden: markup, stylesheet and script tags
-voxel-garden/js/      the garden's classic scripts (world, render, audio, ui, loop)
+voxel-garden/js/      the garden's classic scripts (world, render, audio, plants, ui, loop)
 voxel-garden/garden.css     the garden's stylesheet
 shared/               code both pages load: time.js, weather.js, audio.js
 proto/                archived style prototypes + their index
@@ -98,6 +99,11 @@ GitHub Actions on every push to `main` and on pull requests.
 a stubbed weather fetch, and checks the place, clock, conditions, canvas pixels, audio profile,
 garden link, city menu, weather buttons, time slider, zoom, garden city picker and back link. It
 also runs in GitHub Actions.
+
+`node tests/check-plants.mjs` seeds the garden's `localStorage` with focus marks and stored plants,
+then checks the `seeds` pill and panel, planting by tap (and refusing on water, paths, the pagoda
+and used ground), the seed count, growth stages, rain watering, the bloom rules for poppies,
+moonflowers and snowdrops, and that plants survive a reload. It also runs in GitHub Actions.
 
 `node tests/check-render.mjs` is a local tool, not run in CI: it loads the same pages with a frozen
 clock, seeded randomness, a virtual animation clock and the stubbed fetch, steps a fixed number of

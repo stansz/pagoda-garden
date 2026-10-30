@@ -151,7 +151,8 @@ function makeScene(name, lamps, build){
 /* ------------------------------------------------------------ garden pieces */
 function plot(P, opts){
   const { water, path, g1, g2, edge } = opts;
-  const waterSet = new Set(water), pathSet = new Set(path);
+  const tileKey = p => p[0] + "," + p[1];
+  const waterSet = new Set(water.map(tileKey)), pathSet = new Set(path.map(tileKey));
   for(let x = 0; x < 22; x++){
     for(let z = 0; z < 22; z++){
       const k = x + "," + z;
@@ -207,7 +208,10 @@ function buildGarden(P){
   pagoda(P, COL.roof, COL.wall, COL.gold);
 }
 
-const S = makeScene("Garden", GARDEN_LAMPS, buildGarden);
+function gardenScene(extra){
+  return makeScene("Garden", GARDEN_LAMPS, P => { buildGarden(P); if(extra) extra(P); });
+}
+let S = gardenScene();
 
 /* ------------------------------------------------------------------ camera */
 let yaw = 3.86, pitch = 0.52;

@@ -144,6 +144,18 @@ the light cannot disagree, and stored manual time and weather are ignored. The g
 `?city=<id>` on load, otherwise it reopens on the city you last chose, otherwise Vancouver, and it
 remembers that choice in `pagoda-garden.v4` alongside volume, zoom and whether the card was open.
 
+## Oct 30 — the garden starts to grow
+
+The focus timer's lifetime `marks` had been counting finished rounds with nothing to spend them on, so
+each one now earns a seed in the garden. A `seeds` pill in the bottom corner opens a panel that picks
+the kind, and tapping grass plants it: the tile must be a bare grass cube, and the seed is spent from
+the same `localStorage` the city page writes. A plant is a sprout for six hours, a stem with a sprout
+for the next eighteen, then grown; rain in the garden's chosen city speeds that up, poppies bloom any
+time, moonflowers only at night and snowdrops only in snow, and everything is remembered across
+reloads so the garden you left is the garden you come back to. The seed checks also turned up an old
+bug: `plot()` stored its tiles as pairs and looked them up as strings, so the pond and the path had
+been drawing as grass since Oct 25. Both are back.
+
 ## Things deliberately not done
 
 - **No bundler, no framework, no build step.** Each page is an HTML file plus plain stylesheet

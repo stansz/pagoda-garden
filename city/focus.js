@@ -88,7 +88,7 @@ function paintSession(){
     note = "ends " + sessionClock(session.endAt) + ", then a " +
            sessionBreakMin(nextType) + "m " + (nextType === "long" ? "long break" : "break");
   }
-  else if(kind === "break") note = (session.autoStart ? "next focus at " : "back at ") + sessionClock(session.endAt);
+  else if(kind === "break") note = "a seed for the garden · " + (session.autoStart ? "next focus at " : "back at ") + sessionClock(session.endAt);
   else if(session.endedAt && now - session.endedAt < 90000){
     const m = Math.round((now - session.endedAt) / 60000);
     note = "break ended " + (m < 1 ? "just now" : m + "m ago");
