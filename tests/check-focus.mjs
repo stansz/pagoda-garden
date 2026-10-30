@@ -1,36 +1,51 @@
 // Headless acceptance check for the focus timer in index.html.
-// Launches Microsoft Edge headless, drives window.PIXEL.session over the
+// Launches headless Edge or Chrome, drives window.PIXEL.session over the
 // Chrome DevTools Protocol, prints PASS/FAIL per check, exits 0 only if all pass.
 // No dependencies: Node >= 22 (global fetch + WebSocket).
-//   node .handoff/check-focus.mjs
+//   node tests/check-focus.mjs
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join } from "node:path";
 
-const EDGE = [
-  process.env.EDGE_PATH,
+const BROWSER = [
+  process.env.BROWSER_PATH,
   "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
   "C:/Program Files/Microsoft/Edge/Application/msedge.exe",
+  "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+  "/usr/bin/microsoft-edge",
 ].filter(Boolean).find(p => existsSync(p));
-if (!EDGE) { console.error("FAIL edge: msedge.exe not found (set EDGE_PATH)"); process.exit(2); }
+if (!BROWSER) { console.error("FAIL browser: no Edge or Chrome found (set BROWSER_PATH)"); process.exit(2); }
 
 const PORT = 9333;
-const PAGE = pathToFileURL(resolve("index.html")).href;
+const PAGE = new URL("../index.html", import.meta.url).href;
 // a browser still on this port would be tested instead of the one launched here
 if (await fetch(`http://127.0.0.1:${PORT}/json/version`).then(() => true, () => false)) {
   console.error(`FAIL harness: port ${PORT} is already in use by another browser`);
   process.exit(2);
 }
 const profile = mkdtempSync(join(tmpdir(), "focus-check-"));
-const edge = spawn(EDGE, [
+const edge = spawn(BROWSER, [
+  ...(process.env.CI ? ["--no-sandbox"] : []),   // CI containers have no user namespaces
   "--headless=new", `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`,
   "--no-first-run", "--no-default-browser-check", "--window-size=1280,800",
   "--autoplay-policy=no-user-gesture-required", "about:blank",
 ], { stdio: "ignore" });
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// poll instead of fixed waits: a CI machine can be several times slower than a desktop
+async function until(fn, ms = 20000) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    try { if (await fn()) return true; } catch {}
+    await sleep(250);
+  }
+  return false;
+}
 let ws, nextId = 1;
 const pending = new Map();
 const exceptions = [];
@@ -77,7 +92,8 @@ async function closeEdge() {
 }
 async function load() {
   await send("Page.navigate", { url: PAGE });
-  await sleep(3000);
+  await sleep(300);
+  await until(() => evaluate(`typeof PIXEL === "object" && document.readyState === "complete"`));
 }
 
 const results = [];
@@ -107,15 +123,18 @@ try {
   await send("Page.enable");
   await load();
 
-  await check("page renders and exposes PIXEL.session", async () =>
-    evaluate(`(() => {
+  await check("page renders and exposes PIXEL.session", async () => {
+    const lit = `(() => {
       if (typeof PIXEL !== "object" || !PIXEL.session) return "no PIXEL.session";
       const c = document.getElementById("scene");
       const w = c.width, h = c.height;
       const d = c.getContext("2d").getImageData(0, 0, w, h).data;
       let lit = 0; for (let i = 0; i < d.length; i += 4 * 97) if (d[i] + d[i+1] + d[i+2] > 30) lit++;
       return lit > 20 ? true : "canvas looks blank";
-    })()`));
+    })()`;
+    await until(async () => (await evaluate(lit)) === true);
+    return evaluate(lit);
+  });
 
   await check("API has pause/resume/extend/skip/setAutoStart/tint", async () =>
     evaluate(`["pause","resume","extend","skip","setAutoStart","tint","start","stop","tick","endIn","get"]
@@ -200,7 +219,7 @@ try {
 
   await check("progress is elapsed/total and drives #focusLine", async () => {
     await evaluate(`${S}.stop(), ${S}.start(25), ${S}.endIn(12.5 * 60000), ${S}.tick()`);
-    await sleep(1500);   // let the 1s width transition settle
+    await until(() => evaluate(`Math.abs(document.getElementById("focusLine").getBoundingClientRect().width / innerWidth - 0.5) < 0.05`));
     const g = await evaluate(`(() => {
       const line = document.getElementById("focusLine");
       if (!line) return "no #focusLine";
@@ -230,14 +249,14 @@ try {
 
   await check("scene tint eases in during focus", async () => {
     await evaluate(`${S}.start(25)`);
-    await sleep(4000);
+    await until(() => evaluate(`${S}.tint().focus > 0.05`));
     const t = await evaluate(`${S}.tint()`);
     return t && t.focus > 0.05 && t.brk < 0.02 || t;
   });
 
   await check("scene tint eases toward break during a break", async () => {
     await evaluate(`${S}.endIn(0), ${S}.tick()`);
-    await sleep(4000);
+    await until(() => evaluate(`(t => t.brk > 0.01 && t.focus < 0.05)(${S}.tint())`));
     const t = await evaluate(`${S}.tint()`);
     return t && t.brk > 0.01 && t.focus < 0.05 || t;
   });

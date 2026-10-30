@@ -72,6 +72,12 @@ There is no build step and no dependency. Most pages work from `file://` directl
 garden and the city view are single self-contained HTML files. The pixel archive's sketch
 prototype loads Rough.js from a CDN and degrades gracefully offline.
 
+## Tests
+
+`node tests/check-focus.mjs` drives the focus timer in a headless browser (Edge or Chrome, or set
+`BROWSER_PATH`) and needs only Node 22+. GitHub Actions runs it on every push to `main` and on pull
+requests; it checks behaviour, not how the page looks.
+
 ## Credits
 
 - Conditions by [Open-Meteo](https://open-meteo.com/).
