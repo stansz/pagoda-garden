@@ -134,6 +134,16 @@ still wall-clock and persisted — a paused round now survives a reload for up t
 
 The two pages had grown to a few thousand lines of inline script each, and small pieces — `clamp`, the `MOOD` table, the WMO labels, the impulse-response and noise helpers — were copied in both. Cut the inline CSS and JavaScript out into plain files loaded with `<link rel="stylesheet">` and classic `<script src>`: `city/` for the pixel page (core, draw, build, one file per city, trees, island, frame, audio, ui, focus, menu, pixel), `voxel-garden/js/` for the garden, and `shared/` for the code the two pages genuinely share. The cuts are exact slices of the old script in its original order, so the files still share one global scope and only the load order matters. No `type="module"`, no `import`/`export`, no build step: both pages still work from `file://`. The render hashes did not move.
 
+## Oct 30 — the garden tells the real time too
+
+The garden was the last page with a clock of its own, so its bottom bar went the way of the city's: the
+time slider, `cycle`, the clear/rain/snow buttons and the `Own time` entry are gone, and the card now
+carries `city`, `sound` and `zoom` in their place. The scene always follows the selected city's real
+local clock and live sky — resynced every second and fetched every 15 minutes or on `↻` — so the card and
+the light cannot disagree, and stored manual time and weather are ignored. The garden also honours
+`?city=<id>` on load, otherwise it reopens on the city you last chose, otherwise Vancouver, and it
+remembers that choice in `pagoda-garden.v4` alongside volume, zoom and whether the card was open.
+
 ## Things deliberately not done
 
 - **No bundler, no framework, no build step.** Each page is an HTML file plus plain stylesheet

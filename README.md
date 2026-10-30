@@ -34,11 +34,12 @@ The city page also reads `?city=<id>`, so links can land on a specific city.
 | --- | --- |
 | Look around | drag; it also turns slowly on its own (~150 s per revolution) |
 | Zoom | wheel, pinch, `+` / `-` buttons, `+` / `-` keys, double-click to reset |
-| Time | slider or `cycle`; picking a city sets its clock and live weather but keeps the garden itself the same |
+| Time and weather | *not controls* — the garden always follows its city's real clock and sky |
+| City | the `city` row in the card; `?city=<id>` lands on one, otherwise the last one you chose, otherwise Vancouver |
 | Ambience | `sound` (browsers need one click), volume slider |
 | Back | a `← back to the city` pill appears when you arrive from the city view |
 
-Time, location, weather, volume, sound preference, zoom and card state are remembered in `localStorage`;
+Location, volume, sound preference, zoom and card state are remembered in `localStorage`;
 a remembered `sound on` waits for the first click before starting, because browsers require a gesture.
 
 ## How it is built

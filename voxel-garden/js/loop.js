@@ -84,12 +84,6 @@ function tick(now){
   const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
   last = now;
 
-  if(cycleOn){
-    hour = (hour + dt * (24 / 420)) % 24;      // full day in seven minutes
-    hourInput.value = hour.toFixed(2);
-    updateClock();
-  }
-
   // fling after a drag, then the ambient turn
   if(!dragging && Math.abs(vel) > 0.001){
     yaw += vel * dt;

@@ -190,6 +190,17 @@ lowpass moving through Dmaj9 → Bm7 → Gmaj7 → Aadd9 every 11–14 s; a sine
 response is generated in the page; a compressor and a soft high shelf on the master, default
 volume 18 % (≈ −49 dBFS RMS).
 
+### Controls live in the card
+
+There is no bottom bar. The corner card is the whole interface: its header is the collapsed state (city,
+real local clock, `↻`, chevron), and the expanded body holds the condition and temperature, a meta line
+with the weather source, and three control rows — `city` (a dropdown that opens under the button and
+picks whose real clock and live sky the scene follows), `sound` (toggle + volume) and `zoom` (`−` / `+`).
+Time and weather are not controls any more: `hour` is resynced from the chosen city's real local clock
+once a second, and its weather is fetched from Open-Meteo every 15 minutes or on `↻`. Start-up uses
+`?city=<id>` if it names a city, otherwise the last city chosen, otherwise Vancouver. Drag, wheel,
+pinch, `+` / `-` keys and double-click still work over the canvas.
+
 ### Back pill
 
 `?city=<id>` (from the city page) or a referrer matching the site root shows a top-right

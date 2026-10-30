@@ -1,10 +1,6 @@
 "use strict";
 
 /* ---------------------------------------------------------------------- UI */
-const ui = document.getElementById("ui");
-const hourInput = document.getElementById("hour");
-const clockEl = document.getElementById("clock");
-const cycleBtn = document.getElementById("cycle");
 const sndBtn = document.getElementById("snd");
 const volInput = document.getElementById("vol");
 const hint = document.getElementById("hint");
@@ -13,7 +9,6 @@ const zoutBtn = document.getElementById("zout");
 const placeBtn = document.getElementById("place");
 const placesEl = document.getElementById("places");
 const placeBtns = Array.from(document.querySelectorAll("[data-place]"));
-const wxBtns = Array.from(document.querySelectorAll("[data-wx]"));
 
 /* ------------------------------------------------------- back to the city */
 // The city page (the site front page) sends people here with ?city=<id>; a browser
@@ -42,65 +37,11 @@ function cityFromQuery(){
   back.hidden = false;
 })();
 
-// Entering from a city sets the garden to that place, so the light and the weather
-// you were just looking at continue indoors. Called once the location list exists.
-function adoptCityFromQuery(){
-  const key = cityFromQuery();
-  if(!key) return;
-  const ix = PLACES.findIndex(p => p.id === key);
-  if(ix >= 0) selectPlace(ix);
-}
-
-function updateClock(){
-  const h = ((hour % 24) + 24) % 24;
-  const hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
-  clockEl.textContent = String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
-}
-updateClock();
-
-let hideTimer = 0;
-function showUI(){
-  ui.classList.add("show");
-  clearTimeout(hideTimer);
-  hideTimer = setTimeout(() => { if(!ui.matches(":hover")) ui.classList.remove("show"); }, 4800);
-}
-addEventListener("pointermove", showUI, { passive: true });
-addEventListener("pointerdown", showUI, { passive: true });
-ui.addEventListener("mouseenter", () => clearTimeout(hideTimer));
-ui.addEventListener("mouseleave", () => { hideTimer = setTimeout(() => ui.classList.remove("show"), 1600); });
-setTimeout(showUI, 700);
-
-hourInput.addEventListener("input", () => {
-  hour = parseFloat(hourInput.value);
-  cycleOn = false;
-  cycleBtn.setAttribute("aria-pressed", "false");
-  updateClock();
-  savePrefs();
-});
-
-cycleBtn.addEventListener("click", () => {
-  cycleOn = !cycleOn;
-  cycleBtn.setAttribute("aria-pressed", String(cycleOn));
-  savePrefs();
-});
-
 function setWeather(which){
   currentWx = which;
   rainTarget = which === "rain" ? 1 : 0;
   snowTarget = which === "snow" ? 1 : 0;
-  for(const b of wxBtns) b.setAttribute("aria-pressed", String(b.dataset.wx === which));
 }
-// A hand-picked sky means you have left location mode: a location is always its real
-// weather, so overriding one drops the city instead of quietly disagreeing with it.
-function manualWeather(which){
-  if(placeIx !== null) selectPlace(null);
-  wxAuto = false;
-  cloudAmt = 0;
-  setWeather(which);
-  updateInfo();
-  savePrefs();
-}
-for(const b of wxBtns) b.addEventListener("click", () => manualWeather(b.dataset.wx));
 
 /* ------------------------------------------------------------------ places */
 // Real city clocks (Intl handles DST) plus live conditions from Open-Meteo, which
@@ -115,7 +56,7 @@ const PLACES = [
   { id: "amsterdam", name: "Amsterdam", lat: 52.3676, lon: 4.9041,    tz: "Europe/Amsterdam" },
   { id: "sydney",    name: "Sydney",    lat: -33.8688, lon: 151.2093, tz: "Australia/Sydney" }
 ];
-let placeIx = null, placeTemp = null, cloudAmt = 0, wxAuto = true;
+let placeIx = 0, placeTemp = null, cloudAmt = 0, wxAuto = true;
 let placeCode = null, fetchState = "idle", lastFetchAt = 0;
 
 function localHour(tz){
@@ -136,14 +77,12 @@ function weatherKind(code){
 }
 
 function updatePlaceLabel(){
-  if(placeIx === null){ placeBtn.textContent = "location"; return; }
   const L = PLACES[placeIx];
-  placeBtn.textContent = L.name + (placeTemp === null ? "" : " " + placeTemp + "°");
+  placeBtn.textContent = L.name + " ▾";
   for(const b of placeBtns) b.setAttribute("aria-current", String(b.dataset.place === String(placeIx)));
 }
 
 async function refreshPlaceWeather(){
-  if(placeIx === null) return;
   const L = PLACES[placeIx];
   fetchState = "loading";
   updateInfo();
@@ -169,24 +108,12 @@ async function refreshPlaceWeather(){
 }
 
 function selectPlace(ix){
-  placeIx = Number.isInteger(ix) ? ix : null;
+  placeIx = PLACES[ix] ? ix : 0;
   placeTemp = null;
-  if(placeIx === null){
-    wxAuto = true;
-    cloudAmt = 0;
-    placeCode = null;
-    fetchState = "idle";
-    updatePlaceLabel();
-  }else{
-    wxAuto = true;
-    hour = localHour(PLACES[placeIx].tz);
-    cycleOn = false;
-    cycleBtn.setAttribute("aria-pressed", "false");
-    hourInput.value = hour.toFixed(2);
-    updateClock();
-    updatePlaceLabel();
-    refreshPlaceWeather();
-  }
+  wxAuto = true;
+  hour = localHour(PLACES[placeIx].tz);
+  updatePlaceLabel();
+  refreshPlaceWeather();
   updateInfo();
   savePrefs();
 }
@@ -195,12 +122,11 @@ function openPlaces(open){
   placesEl.hidden = !open;
   placeBtn.setAttribute("aria-expanded", String(open));
   if(open){
-    showUI();
-    // sit just above the bar and centred on the button, whatever the bar wrapped to
-    const bar = ui.getBoundingClientRect();
-    const pb = placeBtn.getBoundingClientRect();
-    placesEl.style.bottom = Math.max(10, Math.round(innerHeight - bar.top + 8)) + "px";
-    placesEl.style.left = Math.round(clamp(pb.left + pb.width / 2, 90, innerWidth - 90)) + "px";
+    // beside the card it belongs to, or under it where the window is too narrow
+    const card = info.getBoundingClientRect();
+    const beside = card.right + 8 + placesEl.offsetWidth <= innerWidth - 10;
+    placesEl.style.left = Math.round(beside ? card.right + 8 : card.left) + "px";
+    placesEl.style.top = Math.round(beside ? card.top : card.bottom + 6) + "px";
   }
 }
 placeBtn.addEventListener("click", e => {
@@ -208,7 +134,7 @@ placeBtn.addEventListener("click", e => {
   openPlaces(placesEl.hidden);
 });
 for(const b of placeBtns) b.addEventListener("click", () => {
-  selectPlace(b.dataset.place === "local" ? null : Number(b.dataset.place));
+  selectPlace(Number(b.dataset.place));
   openPlaces(false);
 });
 addEventListener("pointerdown", e => {
@@ -224,7 +150,6 @@ const infoRefresh = document.getElementById("infoRefresh");
 const infoCond = document.getElementById("infoCond");
 const infoTemp = document.getElementById("infoTemp");
 const infoMeta = document.getElementById("infoMeta");
-const infoScene = document.getElementById("infoScene");
 
 function fmtHour(h){
   const x = ((h % 24) + 24) % 24;
@@ -233,46 +158,29 @@ function fmtHour(h){
 }
 
 function updateInfo(){
-  const place = placeIx === null ? null : PLACES[placeIx];
-  const realH = place ? localHour(place.tz) : ownHour();
+  const place = PLACES[placeIx];
+  const realH = localHour(place.tz);
 
-  infoPlace.textContent = place ? place.name : "Own time";
+  infoPlace.textContent = place.name;
   infoClock.textContent = fmtHour(realH);
 
-  if(place){
-    infoCond.textContent = !wxAuto ? condLabel(wxToCode(currentWx))
-      : fetchState === "loading" ? "Loading…"
-      : placeCode === null ? "—" : condLabel(placeCode);
-    infoTemp.textContent = placeTemp === null ? "" : Math.round(placeTemp) + "°C";
-  }else{
-    infoCond.textContent = condLabel(wxToCode(currentWx));
-    infoTemp.textContent = "";
-  }
+  infoCond.textContent = fetchState === "loading" ? "Loading…"
+    : placeCode === null ? "—" : condLabel(placeCode);
+  infoTemp.textContent = placeTemp === null ? "" : Math.round(placeTemp) + "°C";
 
   const age = lastFetchAt ? Math.round((Date.now() - lastFetchAt) / 60000) : null;
-  infoMeta.textContent = (!place || !wxAuto) ? "Weather set by hand"
-    : fetchState === "error" ? "Offline · last known"
+  infoMeta.textContent = fetchState === "error" ? "Offline · last known"
     : fetchState !== "ok" ? "Fetching…"
     : "Open-Meteo" + (age === null ? "" : " · " + (age < 1 ? "just now" : age + "m ago"));
 
-  const differs = Math.abs(hour - realH) > 0.12;
-  infoScene.hidden = !differs;
-  if(differs) infoScene.textContent = "Scene " + fmtHour(hour) + (cycleOn ? " · cycling" : "");
-
-  const busy = fetchState === "loading" && !!place;
-  infoRefresh.disabled = !place;
-  infoRefresh.classList.toggle("spin", busy);
-  infoRefresh.title = place ? "Refresh this city now" : "Pick a location to refresh its weather";
+  infoRefresh.classList.toggle("spin", fetchState === "loading");
+  infoRefresh.title = "Refresh this city now";
   infoHead.setAttribute("aria-expanded", String(!info.classList.contains("closed")));
 }
 
 function refreshNow(){
-  if(placeIx === null || fetchState === "loading") return;
-  if(!cycleOn){                                  // re-sync the sky to the city's real clock too
-    hour = localHour(PLACES[placeIx].tz);
-    hourInput.value = hour.toFixed(2);
-    updateClock();
-  }
+  if(fetchState === "loading") return;
+  hour = localHour(PLACES[placeIx].tz);       // re-sync the sky to the city's real clock too
   refreshPlaceWeather();
 }
 
@@ -293,19 +201,12 @@ infoRefresh.addEventListener("click", e => {
   e.stopPropagation();                 // don't also collapse the card
   refreshNow();
 });
-setInterval(updateInfo, 1000);
-
-// keep the chosen city's clock honest, and refresh its weather now and then
+// the scene's clock is the chosen city's real clock, and its weather is refreshed now and then
 setInterval(() => {
-  if(placeIx === null) return;
-  const t = localHour(PLACES[placeIx].tz);
-  if(Math.abs(t - hour) > 0.02 && !cycleOn){
-    hour = t;
-    hourInput.value = hour.toFixed(2);
-    updateClock();
-  }
-}, 30000);
-setInterval(() => { if(placeIx !== null && wxAuto) refreshPlaceWeather(); }, 15 * 60 * 1000);
+  hour = localHour(PLACES[placeIx].tz);
+  updateInfo();
+}, 1000);
+setInterval(() => { if(wxAuto) refreshPlaceWeather(); }, 15 * 60 * 1000);
 
 
 sndBtn.addEventListener("click", async () => {
@@ -337,7 +238,7 @@ function savePrefsSoon(){ clearTimeout(prefTimer); prefTimer = setTimeout(savePr
 function savePrefs(){
   try {
     localStorage.setItem(PREF_KEY, JSON.stringify({
-      hour, cycleOn, wx: currentWx, vol, zoom: +zoomTarget.toFixed(3), place: placeIx,
+      vol, zoom: +zoomTarget.toFixed(3), place: placeIx,
       infoOpen: !info.classList.contains("closed")
     }));
   } catch(e){}
@@ -345,20 +246,21 @@ function savePrefs(){
 function loadPrefs(){
   let p = null;
   try { p = JSON.parse(localStorage.getItem(PREF_KEY) || "null"); } catch(e){}
-  if(!p) return;
-  if(Number.isFinite(p.hour)) hour = p.hour;
-  if(typeof p.cycleOn === "boolean") cycleOn = p.cycleOn;
+  if(!p) return null;
   if(typeof p.vol === "number"){ vol = p.vol; volInput.value = String(vol); }
   if(Number.isFinite(p.zoom)){ zoom = zoomTarget = clamp(p.zoom, ZOOM_MIN, ZOOM_MAX); }
   if(typeof p.infoOpen === "boolean"){ info.classList.toggle("closed", !p.infoOpen); }
-  hourInput.value = hour.toFixed(2);
-  cycleBtn.setAttribute("aria-pressed", String(cycleOn));
-  updateClock();
-  setWeather(typeof p.wx === "string" ? p.wx : "clear");
-  if(Number.isInteger(p.place) && PLACES[p.place]) selectPlace(p.place);
-  updateInfo();
+  return p;
 }
-loadPrefs();
-if(cityFromQuery()) adoptCityFromQuery();      // the URL wins over remembered state
+
+// the URL wins over remembered state; otherwise the last city, otherwise Vancouver
+const savedPrefs = loadPrefs();
+let startIx = savedPrefs && Number.isInteger(savedPrefs.place) && PLACES[savedPrefs.place] ? savedPrefs.place : 0;
+const queryKey = cityFromQuery();
+if(queryKey){
+  const qix = PLACES.findIndex(p => p.id === queryKey);
+  if(qix >= 0) startIx = qix;
+}
+selectPlace(startIx);
 setTimeout(() => { hint.style.opacity = "0"; }, 14000);
 

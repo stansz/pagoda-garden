@@ -10,33 +10,7 @@
 <canvas id="scene"></canvas>
 <div id="hint">drag to look &middot; scroll to zoom &middot; enable sound for ambience</div>
 
-<div id="ui">
-  <div class="grp">
-    <span class="lbl">time</span>
-    <input id="hour" type="range" min="0" max="24" step="0.05" value="16.6" aria-label="Time of day">
-    <span id="clock">16:36</span>
-    <button id="cycle" aria-pressed="true" title="Slow day and night cycle">cycle</button>
-  </div>
-  <div class="grp">
-    <button id="place" aria-haspopup="true" aria-expanded="false" title="Match a city's time and weather">location</button>
-  </div>
-  <div class="grp">
-    <button data-wx="clear" aria-pressed="true">clear</button>
-    <button data-wx="rain" aria-pressed="false">rain</button>
-    <button data-wx="snow" aria-pressed="false">snow</button>
-  </div>
-  <div class="grp">
-    <button id="zout" aria-label="Zoom out" title="Zoom out (scroll)">&minus;</button>
-    <button id="zin" aria-label="Zoom in" title="Zoom in (scroll)">+</button>
-  </div>
-  <div class="grp">
-    <button id="snd" aria-pressed="false">sound</button>
-    <input id="vol" type="range" min="0" max="1" step="0.01" value="0.18" aria-label="Volume">
-  </div>
-</div>
-
 <div id="places" hidden>
-  <button data-place="local">Own time</button>
   <button data-place="0">Vancouver</button>
   <button data-place="1">Toronto</button>
   <button data-place="2">Hawai&lsquo;i</button>
@@ -55,7 +29,14 @@
   <div id="infoBody">
     <div class="row"><span id="infoCond">Clear sky</span><span id="infoTemp"></span></div>
     <div class="row muted" id="infoMeta"></div>
-    <div class="row muted" id="infoScene" hidden></div>
+    <div class="ctl"><span class="lbl">city</span>
+      <button id="place" aria-haspopup="true" aria-expanded="false" title="Change city">Vancouver</button></div>
+    <div class="ctl"><span class="lbl">sound</span>
+      <button id="snd" aria-pressed="false">sound</button>
+      <input id="vol" type="range" min="0" max="1" step="0.01" value="0.18" aria-label="Volume"></div>
+    <div class="ctl"><span class="lbl">zoom</span>
+      <button id="zout" aria-label="Zoom out" title="Zoom out (scroll)">&minus;</button>
+      <button id="zin" aria-label="Zoom in" title="Zoom in (scroll)">+</button></div>
   </div>
 </div>
 
