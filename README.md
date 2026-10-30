@@ -23,6 +23,7 @@ from static files.
 | Weather | *not a control* — every city always shows its own real sky, which is why the card and the scene agree |
 | Ambience | the `sound` row in the card, with a volume slider — each city has its own chord set, tempo, brightness and reverb |
 | Corner card | collapsed it reads `Vancouver 01:22` / `Overcast 7 °C Autumn`; expanded it adds the hemisphere, the weather source and the controls. `↻` refetches that city now; click the header to collapse |
+| Focus timer | the `◷ focus` pill in the bottom-right opens a small panel: 25 or 50 minutes, then a 10-minute break; `f` starts/stops, `Esc` closes the panel. Running, the pill and the tab title show the minutes left |
 | The garden | click the pagoda island |
 
 The city page also reads `?city=<id>`, so links can land on a specific city.

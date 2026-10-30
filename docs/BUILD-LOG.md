@@ -111,6 +111,14 @@ Collapsed, the card now reads like a weather station rather than a label: `Vanco
 The same strings are computed once in `updateInfo` and painted into both the summary line and the
 expanded body, so the two can never disagree.
 
+## Oct 30 — the timer gets its own corner, and merges
+
+The session row and `▷` made the card busy, so the timer moved out: a pill in the bottom-right
+(clear of the island) reads `◷ focus`, `◷ 18m` or `break 7m`, and opens a small panel with the
+countdown, `25m`/`50m` while idle, start / stop / end break and an end-time note. Click outside or
+`Esc` closes it; `f` still toggles. The card is back to place, weather and sound. The branch merged
+into `main` and the `/focus/` preview is gone.
+
 ## Things deliberately not done
 
 - **No bundler, no framework, no build step.** Each page is one self-contained HTML file so it

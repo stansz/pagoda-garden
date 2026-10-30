@@ -64,6 +64,32 @@
   #infoBody .muted{color:#8798a2;font-size:11.5px;line-height:1.35}
   @media (max-width:760px){ #info{top:10px;left:10px;min-width:150px} }
 
+  /* ---- focus timer: its own pill in the bottom-right, away from the card
+     (top-left) and the island (bottom-left); the panel opens above it ---- */
+  #focus{position:fixed;right:14px;bottom:14px;z-index:6;display:flex;flex-direction:column;
+      align-items:flex-end;gap:8px;color:#e6edf1;font:12.5px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+  #focusPill,#focusPanel{background:rgba(10,14,17,.62);border:1px solid rgba(255,255,255,.13);
+      backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(0,0,0,.3)}
+  #focusPill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
+      color:#93a6b3;font-variant-numeric:tabular-nums}
+  #focusPill:hover{color:#fff;background:rgba(22,28,32,.78)}
+  #focusPill[data-kind="focus"]{color:#e8cb84;border-color:rgba(232,203,132,.38)}
+  #focusPill[data-kind="break"]{color:#9fd0b8;border-color:rgba(159,208,184,.38)}
+  #focusPill .ico{font-size:13px;line-height:1}
+  #focusPanel{width:190px;box-sizing:border-box;padding:10px 12px 12px;border-radius:12px;
+      display:flex;flex-direction:column;gap:8px}
+  #focusPanel[hidden]{display:none}
+  #focusKind{color:#8fa0a9;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
+  #focusLeft{font-size:28px;line-height:1.05;color:#c6d2d9;font-variant-numeric:tabular-nums}
+  #focusLeft.focus{color:#e8cb84}
+  #focusLeft.break{color:#9fd0b8}
+  #focusNote{color:#8798a2;font-size:11.5px;line-height:1.35;min-height:1.35em}
+  #focusLens{display:flex;gap:6px}
+  #focusLens[hidden]{display:none}
+  #focusLens button{flex:1}
+  #focusGo{width:100%}
+  @media (max-width:760px){ #focus{right:10px;bottom:10px} }
+
   /* ---- the pagoda island is a link into the voxel garden ----
      Sits under the UI (z-index 4 < bar's 5 and card's 6) so it can never eat a
      click meant for the controls; the rectangle itself is placed in JS from the
@@ -114,6 +140,22 @@
       <button id="snd" aria-pressed="false" title="Ambient sound">sound</button>
       <input id="vol" type="range" min="0" max="1" step="0.01" value="0.18" aria-label="Volume"></div>
   </div>
+</div>
+
+<div id="focus">
+  <div id="focusPanel" role="dialog" aria-label="Focus timer" hidden>
+    <span id="focusKind">focus</span>
+    <span id="focusLeft">50m</span>
+    <div id="focusLens" role="group" aria-label="Session length">
+      <button data-len="25" aria-pressed="false">25m</button>
+      <button data-len="50" aria-pressed="true">50m</button>
+    </div>
+    <button id="focusGo">start</button>
+    <span id="focusNote"></span>
+  </div>
+  <button id="focusPill" aria-haspopup="dialog" aria-expanded="false" data-kind="idle">
+    <span class="ico" aria-hidden="true">&#9719;</span><span id="focusPillText">focus</span>
+  </button>
 </div>
 
 <script>
@@ -3044,7 +3086,9 @@ function updateAudio(){
   if(toneFilter)
     toneFilter.frequency.setTargetAtTime(lerp(18000, 9000, clamp(state.snowAmt, 0, 1)), t, 1.2);
   if(padFilter){
-    const want = prof.cutoff * seasonCut();
+    // the session's half colours the room slightly: focus dimmer, break brighter
+    const phase = session.kind === "focus" ? 0.90 : session.kind === "break" ? 1.14 : 1;
+    const want = prof.cutoff * seasonCut() * phase;
     if(Math.abs(padFilter.frequency.value - want) > want * 0.03)
       padFilter.frequency.setTargetAtTime(want, t, 1.2);
   }
@@ -3173,6 +3217,7 @@ function updateInfo(){
   infoRefresh.classList.toggle("spin", busy);
   infoRefresh.title = state.own ? "Pick a city to see its live weather" : "Refresh this city now";
   infoHead.setAttribute("aria-expanded", String(!infoEl.classList.contains("closed")));
+  tickSession();
 }
 
 function updateClockLabel(){
@@ -3304,7 +3349,8 @@ function savePrefs(){
       city: state.city, hour: +state.hour.toFixed(3), cycleOn: state.cycleOn,
       own: state.own, wx: state.wx, vol: +vol.toFixed(3),
       soundOn: soundWanted || soundOn,
-      infoOpen: !infoEl.classList.contains("closed")
+      infoOpen: !infoEl.classList.contains("closed"),
+      session: sessionSave()
     }));
   }catch(e){}
 }
@@ -3320,6 +3366,7 @@ function loadPrefs(){
   state.cycleOn = false;                       // there is no fake clock any more
   state.own = false;
   if(pr && typeof pr.infoOpen === "boolean") infoEl.classList.toggle("closed", !pr.infoOpen);
+  if(pr) restoreSession(pr.session);
   // sound: the level is remembered, and "on" is remembered as an intent that
   // is only honoured on the first gesture (never autoplay)
   if(pr && Number.isFinite(pr.vol)) vol = clamp(pr.vol, 0, 1);
@@ -3472,6 +3519,169 @@ function layoutGardenLink(){
   gardenLink.style.width = Math.round(w) + "px";
   gardenLink.style.height = Math.round(h) + "px";
 }
+
+/* =========================================================================
+   Focus session — a timekeeper, not a productivity app.  It lives in its own
+   pill in the bottom-right (the card stays about the place); the pill opens a
+   small panel.  No rings, no notifications.  Deadlines only (wall clock), so
+   a hidden tab or a reload lands in the right state.
+   ========================================================================= */
+const BASE_TITLE = (typeof document !== "undefined" && document.title) || "";
+const FOCUS_LENGTHS = [50, 25];              // click the idle row to cycle
+const BREAK_MIN = 10;
+const session = { kind: "idle", lenMin: 50, endAt: 0, startedAt: 0, marks: 0, endedAt: 0 };
+
+function sessionMinLeft(){
+  return Math.max(0, Math.ceil((session.endAt - Date.now()) / 60000));
+}
+function sessionSave(){
+  return { kind: session.kind, lenMin: session.lenMin, endAt: session.endAt, startedAt: session.startedAt, marks: session.marks };
+}
+function restoreSession(pr){
+  if(!pr || typeof pr !== "object") return;
+  if(Number.isFinite(pr.lenMin) && pr.lenMin > 0) session.lenMin = pr.lenMin;
+  if(Number.isInteger(pr.marks)) session.marks = pr.marks;
+  const kind = pr.kind === "focus" || pr.kind === "break" ? pr.kind : "idle";
+  const endAt = Number(pr.endAt) || 0;
+  if(kind === "idle" || !endAt) return;
+  const slack = 120000;                       // two minutes of grace for a reload
+  if(endAt < Date.now() - slack){ session.kind = "idle"; session.endAt = 0; return; }
+  session.kind = kind;
+  session.endAt = endAt;
+  session.startedAt = Number(pr.startedAt) || Date.now();
+}
+
+function sessionClock(ms){
+  return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+function paintSession(){
+  const $ = id => document.getElementById(id);
+  const pill = $("focusPill"), panel = $("focusPanel");
+  const now = Date.now();
+  const kind = session.kind;
+  const left = sessionMinLeft();
+  let note = "";
+  if(kind === "focus") note = "ends " + sessionClock(session.endAt) + ", then a break";
+  else if(kind === "break") note = "back at " + sessionClock(session.endAt);
+  else if(session.endedAt && now - session.endedAt < 90000){
+    const m = Math.round((now - session.endedAt) / 60000);
+    note = "break ended " + (m < 1 ? "just now" : m + "m ago");
+  }else note = "f to start or stop";
+  if(pill){
+    pill.dataset.kind = kind;
+    $("focusPillText").textContent = kind === "focus" ? left + "m" : kind === "break" ? "break " + left + "m" : "focus";
+    pill.title = kind === "idle" ? "Focus timer" : kind + " · " + left + " min left";
+    pill.setAttribute("aria-expanded", String(!!panel && !panel.hidden));
+  }
+  if(panel){
+    $("focusKind").textContent = kind === "break" ? "break" : "focus";
+    const big = $("focusLeft");
+    big.textContent = (kind === "idle" ? session.lenMin : left) + "m";
+    big.className = kind === "idle" ? "" : kind;
+    const lens = $("focusLens");
+    lens.hidden = kind !== "idle";
+    for(const b of lens.querySelectorAll("button"))
+      b.setAttribute("aria-pressed", String(+b.dataset.len === session.lenMin));
+    $("focusGo").textContent = kind === "idle" ? "start" : kind === "focus" ? "stop" : "end break";
+    $("focusNote").textContent = note;
+  }
+  paintTitle();
+}
+function paintTitle(){
+  if(typeof document === "undefined") return;
+  let prefix = "";
+  if(session.kind === "focus") prefix = sessionMinLeft() + "m · ";
+  else if(session.kind === "break") prefix = "break " + sessionMinLeft() + "m · ";
+  document.title = prefix + BASE_TITLE;
+}
+function playCadence(){
+  if(!soundOn || !ac || typeof pluck !== "function") return;
+  try{
+    const prof = musicProfile();
+    const root = prof.chords[0].bass * 2;      // a slow tonic, an octave up
+    pluck(root, ac.currentTime + 0.06, prof);
+  }catch(e){}
+  try{ savePrefs(); }catch(e){}
+}
+function advanceSession(){
+  const now = Date.now();
+  if(session.kind === "focus"){
+    session.marks++;                           // one mark per completed focus
+    session.kind = "break";
+    session.startedAt = now;
+    session.endAt = now + BREAK_MIN * 60000;
+    playCadence();
+  }else if(session.kind === "break"){
+    session.kind = "idle";
+    session.endAt = 0;
+    session.endedAt = now;
+  }
+  try{ savePrefs(); }catch(e){}
+}
+function tickSession(){
+  if(session.kind !== "idle" && session.endAt && Date.now() >= session.endAt) advanceSession();
+  paintSession();
+}
+function startSession(min){
+  if(session.kind !== "idle") return false;
+  session.lenMin = Number.isFinite(min) && min > 0 ? min : session.lenMin;
+  session.kind = "focus";
+  session.startedAt = Date.now();
+  session.endAt = session.startedAt + session.lenMin * 60000;
+  session.endedAt = 0;
+  tickSession();
+  try{ savePrefs(); }catch(e){}
+  return true;
+}
+function stopSession(){
+  session.kind = "idle";
+  session.endAt = 0;
+  session.endedAt = 0;
+  tickSession();
+  try{ savePrefs(); }catch(e){}
+}
+function toggleSession(){
+  if(session.kind === "idle") return startSession();
+  stopSession();
+  return false;
+}
+function setSessionLength(min){
+  if(session.kind !== "idle" || !FOCUS_LENGTHS.includes(min)) return;
+  session.lenMin = min;
+  session.endedAt = 0;                         // the new length is what you should see
+  paintSession();
+  try{ savePrefs(); }catch(e){}
+}
+(function wireSession(){
+  const wrap = document.getElementById("focus");
+  const pill = document.getElementById("focusPill");
+  const panel = document.getElementById("focusPanel");
+  const setOpen = open => { if(panel){ panel.hidden = !open; paintSession(); } };
+  if(pill) pill.addEventListener("click", () => setOpen(panel.hidden));
+  const go = document.getElementById("focusGo");
+  if(go) go.addEventListener("click", () => {
+    if(session.kind === "break") advanceSession(); else toggleSession();
+    paintSession();
+  });
+  const lens = document.getElementById("focusLens");
+  if(lens) lens.addEventListener("click", e => {
+    const b = e.target.closest("button[data-len]");
+    if(b) setSessionLength(+b.dataset.len);
+  });
+  // a click anywhere else puts the panel away
+  addEventListener("pointerdown", e => { if(wrap && !wrap.contains(e.target)) setOpen(false); });
+  addEventListener("keydown", e => {
+    const t = e.target;
+    if(t && /input|textarea|select/i.test(t.tagName || "")) return;
+    if(e.key === "f" || e.key === "F"){ e.preventDefault(); toggleSession(); }
+    else if(e.key === "Escape"){
+      if(panel && !panel.hidden){ e.preventDefault(); setOpen(false); }
+      else if(session.kind !== "idle"){ e.preventDefault(); stopSession(); }
+    }
+  });
+  addEventListener("pagehide", () => { try{ savePrefs(); }catch(e){} });
+  paintSession();
+})();
 
 /* ------------------------------------------------------------ city dropdown */
 const cityBtnEl = document.getElementById("cityBtn");
@@ -3695,6 +3905,15 @@ const PIXEL = {
   },
   audioUpdate(){ updateAudio(); return PIXEL.audio(); },
   audioToggle(){ return setSoundOn(!soundOn); },
+  session: {
+    get(){ return { kind: session.kind, lenMin: session.lenMin, leftMs: Math.max(0, session.endAt - Date.now()),
+                    marks: session.marks, title: document.title }; },
+    start(min){ return startSession(min); },
+    stop(){ stopSession(); },
+    tick(){ tickSession(); },
+    endIn(ms){ session.endAt = Date.now() + Math.max(0, ms); },
+    row(){ const r = document.getElementById("focusPillText"); return r ? r.textContent : null; }
+  },
   selectCity(id){ if(CITY_BY_ID[id]) setCity(id, true); return state.city; }
 };
 if(typeof globalThis !== "undefined") globalThis.PIXEL = PIXEL;
