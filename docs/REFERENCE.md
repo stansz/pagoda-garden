@@ -158,7 +158,7 @@ like: `usesPad: false` moods should build their own bus into `mixBus` and a send
 Lo-fi shares one progression, pattern and voice set across cities. The `LOFI` table gives each
 city only a key and a tempo (Hong Kong alone is minor), and a city change lands on the next bar.
 The chord stab sits on step 6 of even bars and step 11 of odd bars, at 40 % either way.
-`LOFI_LEVEL = 0.46` keeps the full-volume peak near 0.9, and `tests/check-audio.mjs` captures every
+`LOFI_LEVEL = 0.41` keeps the full-volume peak near 0.9, and `tests/check-audio.mjs` captures every
 sample of the master for 20 s to hold it under 0.98.
 
 `shared/moods.js` adds six moods. Rain piano drops sparse piano notes over a filtered rain bed,

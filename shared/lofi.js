@@ -33,7 +33,7 @@ const LOFI_MINOR = [
 ];
 const LOFI_PENTA_MAJOR = [0, 2, 4, 7, 9];
 const LOFI_PENTA_MINOR = [0, 3, 5, 7, 10];
-const LOFI_LEVEL = 0.46;
+const LOFI_LEVEL = 0.41;
 
 let lofiBus = null, lofiOut = null;
 let lofiShaper = null, lofiLow = null, lofiHigh = null, lofiDelay = null;
