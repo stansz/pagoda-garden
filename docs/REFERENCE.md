@@ -183,6 +183,21 @@ satchel and journal views, all text through `textContent`. The engine starts its
 whenever `session.kind === "focus"`, so the game never competes with the timer. `WALK` is the
 headless hook the checks use (`get`, `choices`, `choose`, `open`, `close`, `world`).
 
+Writing a story:
+
+- There is no combat, no failure and no countdown.
+- Prefer `if` to `show`: a visible lock such as "only while it is raining" is a reason to come
+  back.
+- A story must be finishable without rain, snow or fog, so weather can open a shortcut or a
+  secret but never be the only way to an ending. `check-story` enforces this and picks up new
+  story files by itself.
+- A story's script tag goes after `city/walk.js`, which declares `STORY`, and before
+  `city/pixel.js`.
+- `check-walk` only plays Vancouver, and `voxel-garden/js/plants.js` reads the lantern seed from
+  the `vancouver` save, so a second city's story needs both extended.
+- Edit `city/stories/vancouver.js`, not `.handoff/story-vancouver.js`, which is a copy left by
+  the handoff that built it.
+
 ---
 
 ## 2. Garden (`/voxel-garden/index.html`)
@@ -199,7 +214,7 @@ from the bounding box (874 voxels, fit 28).
 - Faces are painter-sorted by **face-centre depth** (a per-face key, not a per-cube one).
 - Face normals: `+x`, `-x`, `+z`, `-z`, `top`. **The `-z` normal must be `(0,0,-1)`.** When it
   was `(0,0,0)` the neighbour probe tested the cube itself, so every `-z` face was culled — the
-  original "missing side / see-through" bug. `render-test.mjs` pins this.
+  original "missing side / see-through" bug.
 - Fixed light, then a full-screen `multiply` grade from `MOOD`, a rain/snow wash, pre-rendered
   glow sprites (sun/moon halo, lanterns, fireflies), weather particles, vignette.
 - The expensive scene half is cached in an offscreen layer and only rebuilt when the camera,
@@ -252,16 +267,13 @@ change. The lantern is the exception: its seed comes from The Far Light's save
 
 ## 3. Tests
 
-No framework, just node scripts in the authoring workspace (not shipped):
+No framework, just node scripts in `tests/`; the README's Tests section says what each one
+proves. New checks use `check("name", fn)` from `tests/browser.mjs`, where `fn` returns `true` or
+a value that explains the failure, and go in `.github/workflows/check.yml`. Pages expose the
+hooks they drive: `PIXEL`, `PLANTS` and `WALK`.
 
-| Script | What it proves |
-| --- | --- |
-| `scripts/check-inline.mjs <file>` | every inline `<script>` block parses (`new vm.Script`) |
-| `render-test.mjs` | garden geometry: normals are unit axis vectors, `occ` matches a rebuild from the voxel set, no probe hits its own cube, drawn face count equals the formula at four camera angles |
-| `info-test.mjs` | card + location logic against a stubbed DOM and a faked Open-Meteo reply: own-time, city clock/condition/temp, manual weather leaving location mode, offline fallback, refresh states, prefs |
-| `scripts/render-pixel.mjs` | renders the pixel page's real framebuffer through a canvas shim and writes contact sheets; asserts city records, the season table (north vs south), drift rules, Sydney's snow refusal, tree crowns differing per season, emitters matching crowns, and one re-bake per season/city change |
-
-Run them from the `pagoda` authoring folder with `node <script>`.
+Passing checks do not prove a page looks right, so load a visual change and look at it at
+desktop and phone widths.
 
 ## 4. Deployment
 

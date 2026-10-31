@@ -89,9 +89,9 @@ archive's sketch prototype loads Rough.js from a CDN and degrades gracefully off
 
 ## Tests
 
-All three scripts drive a headless browser (Edge or Chrome, or set `BROWSER_PATH`) over the Chrome
-DevTools Protocol and need only Node 22+, no install and no network. Run them from the repository
-root.
+The scripts need only Node 22+, no install and no network. All but `check-story` drive a headless
+browser (Edge or Chrome, or set `BROWSER_PATH`) over the Chrome DevTools Protocol. Run them from the
+repository root.
 
 `node tests/check-focus.mjs` checks the focus timer's behaviour in `index.html` — rounds, breaks,
 pause, extend, skip, auto-start, the progress line, the scene tint and a reload — and is run by
@@ -117,13 +117,16 @@ keyboard shortcuts and the lantern seed it plants in the garden. It runs in GitH
 
 `node tests/check-render.mjs` is a local tool, not run in CI: it loads the same pages with a frozen
 clock, seeded randomness, a virtual animation clock and the stubbed fetch, steps a fixed number of
-frames, and compares a pixel and text hash against `tests/golden/render.json`. Its baseline was
-recorded on Windows, so it only makes sense on Windows; refresh the baseline with
+frames, and compares a pixel and text hash against `tests/golden/render.json`. It hashes the
+`#scene` canvas and `document.body.innerText`, so `hidden` elements and CSS `::after` text cannot
+change it, and a pass says nothing about them. Its baseline was recorded on Windows, so it only
+makes sense on Windows; refresh the baseline with
 `node tests/check-render.mjs --update` only when a visual change is intended, and review the
 resulting diff like any other change.
 
 A shell that cannot start a browser, such as a sandboxed agent, can run `node tests/start-browser.mjs`
 from a normal shell first, then run the checks with `CHECK_ATTACH=1`. `--stop` shuts that browser down.
+`dsh` is such a shell, and MSYS tools such as `cmp` also abort there.
 
 ## Credits
 
