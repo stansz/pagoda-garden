@@ -316,7 +316,7 @@ change. The lantern is the exception: its seed comes from The Far Light's save
 
 No framework, just node scripts in `tests/`; the README's Tests section says what each one
 proves. New checks use `check("name", fn)` from `tests/browser.mjs`, where `fn` returns `true` or
-a value that explains the failure. Nothing runs the checks automatically. Pages expose the
+a value that explains the failure, and go in `.github/workflows/check.yml`. Pages expose the
 hooks they drive: `PIXEL`, `PLANTS` and `WALK`.
 
 Passing checks do not prove a page looks right, so load a visual change and look at it at

@@ -57,7 +57,7 @@ try {
     if (!String(note).includes("seed")) return { note };
     const saved = await evaluate(`localStorage.getItem("pagoda-pixel-window.v1")`);
     await loadGarden({ clear: false });
-    // this has rarely found no city save at all, cause unknown; `saved` shows which side lost it
+    // CI sometimes finds no city save here at all, cause unknown; `saved` shows which side lost it
     const ok = await until(() => evaluate(`(paintBed(), document.getElementById("bedPill").textContent === "seeds 1")`));
     return ok || evaluate(`({ pill: document.getElementById("bedPill").textContent,
                               stored: localStorage.getItem(CITY_KEY) })`).then(r => ({ ...r, saved }));

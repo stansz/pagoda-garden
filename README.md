@@ -92,36 +92,39 @@ archive's sketch prototype loads Rough.js from a CDN and degrades gracefully off
 
 ## Tests
 
-Nothing runs these automatically, so run them by hand. The scripts need only Node 22+, no install and no network. All but `check-story` drive a headless
+The scripts need only Node 22+, no install and no network. All but `check-story` drive a headless
 browser over the Chrome DevTools Protocol: Edge or Chrome is found in its usual Windows or Linux path,
 and on macOS `BROWSER_PATH` must point at the executable. Run them from the
 repository root.
 
 `node tests/check-focus.mjs` checks the focus timer's behaviour in `index.html` — rounds, breaks,
-pause, extend, skip, auto-start, the progress line, the scene tint and a reload.
+pause, extend, skip, auto-start, the progress line, the scene tint and a reload — and is run by
+GitHub Actions on every push to `main` and on pull requests.
 
 `node tests/check-pages.mjs` loads all six cities of `index.html` and `voxel-garden/index.html` with
 a stubbed weather fetch, and checks the place, clock, conditions, canvas pixels, audio profile,
-garden link, city menu, the removed time and weather controls, zoom, garden city picker and back link.
+garden link, city menu, the removed time and weather controls, zoom, garden city picker and back link. It
+also runs in GitHub Actions.
 
 `node tests/check-audio.mjs` drives both pages' sound: the mood picker, the chord crossfade, pad
 drift and reverb swap, chord-aware plucks, the lo-fi beat clock, hat level and loudness, the
-full-volume ceiling, and a saved sound-on lo-fi preference after a reload.
+full-volume ceiling, and a saved sound-on lo-fi preference after a reload. It also runs in GitHub
+Actions.
 
 `node tests/check-plants.mjs` seeds the garden's `localStorage` with focus marks and stored plants,
 then checks the `seeds` pill and panel, planting by tap (and refusing on water, paths, the pagoda
 and used ground), the seed count, growth stages, rain watering, the bloom rules for poppies,
-moonflowers and snowdrops, and that plants survive a reload.
+moonflowers and snowdrops, and that plants survive a reload. It also runs in GitHub Actions.
 
 `node tests/check-story.mjs` needs no browser: it walks every state of every story in
 `city/stories/` in every combination of time, weather, season and garden, and proves no scene is
-unreachable, nobody can get stuck and no ending can demand a snowfall.
+unreachable, nobody can get stuck and no ending can demand a snowfall. It runs in GitHub Actions.
 
 `node tests/check-walk.mjs` plays The Far Light in a real page: the light on the far shore, the
 panel, the satchel and journal, the clock/weather/plant locks, a save that survives a reload, the
-keyboard shortcuts and the lantern seed it plants in the garden.
+keyboard shortcuts and the lantern seed it plants in the garden. It runs in GitHub Actions.
 
-`node tests/check-render.mjs` loads the same pages with a frozen
+`node tests/check-render.mjs` is a local tool, not run in CI: it loads the same pages with a frozen
 clock, seeded randomness, a virtual animation clock and the stubbed fetch, steps a fixed number of
 frames, and compares a pixel and text hash against `tests/golden/render.json`. It hashes the
 `#scene` canvas and `document.body.innerText`, so `hidden` elements and CSS `::after` text cannot
