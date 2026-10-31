@@ -55,6 +55,7 @@ let sndBtn = null, volInput = null, moodSel = null;
 let suspendTimer = 0, lastAudioUpdate = -1;
 let padLfoOdd = null, padLfoEven = null;
 let padLayers = [], lastPluckIx = 0;
+let bgAudio = null, bgDest = null;
 const CHORD_FADE = 4;
 const PAD_PANS = [-0.5, 0.25, -0.15, 0.5, -0.3];
 
@@ -311,6 +312,36 @@ function audioInit(){
     });
 
   return true;
+}
+
+/* Android freezes a page's WebAudio when the browser is minimized unless a real
+   media element is playing, so there the mix goes out through an <audio> element.
+   Call from a gesture; if play() is refused the mix stays on ac.destination. */
+function audioBackground(){
+  if(!ac || typeof navigator === "undefined" || !/Android/i.test(navigator.userAgent)) return;
+  if(!bgAudio){
+    try {
+      bgDest = ac.createMediaStreamDestination();
+      analyser.connect(bgDest);
+      bgAudio = new Audio();
+      bgAudio.srcObject = bgDest.stream;
+    } catch(e){ bgAudio = null; return; }
+    if("mediaSession" in navigator){
+      try {
+        if(typeof MediaMetadata === "function")
+          navigator.mediaSession.metadata = new MediaMetadata({ title: "Pagoda garden" });
+        navigator.mediaSession.setActionHandler("play", () => setSoundOn(true));
+        navigator.mediaSession.setActionHandler("pause", () => setSoundOn(false));
+      } catch(e){}
+    }
+  }
+  const played = bgAudio.play();
+  if(played) played.then(() => {
+    try { analyser.disconnect(ac.destination); } catch(e){}
+    if("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing";
+  }, () => {
+    try { analyser.connect(ac.destination); } catch(e){}
+  });
 }
 
 /* ------------------------------------------------------------------ plucks */
@@ -570,6 +601,7 @@ function startSound(){
   try { ac.resume(); } catch(e){}
   soundOn = true;
   soundWanted = true;
+  audioBackground();
   const prof = musicProfile();
   const mood = MOODS[moodId];
   chordIx = Math.floor(Math.random() * prof.chords.length);
@@ -589,6 +621,10 @@ function stopSound(){
   soundWanted = false;
   if(!ac) return;
   clearInterval(schedTimer);
+  if(bgAudio){
+    bgAudio.pause();
+    if("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused";
+  }
   if(typeof MOODS[moodId].stop === "function") MOODS[moodId].stop(ac.currentTime);
   if(master) master.gain.setTargetAtTime(0, ac.currentTime, 0.6);
   clearTimeout(suspendTimer);

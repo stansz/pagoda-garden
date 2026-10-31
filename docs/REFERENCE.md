@@ -143,6 +143,9 @@ inline analyser (`master → analyser → destination`) feeds `PIXEL.audio().rms
 headless checks; at the default volume the city mood measures about −40 dBFS RMS and lo-fi about
 −39 dBFS, and `tests/check-audio.mjs` requires a steady mean RMS above 0.0065.
 
+On Android, `audioBackground()` sends the mix through an `<audio>` element with Media Session
+controls, because a minimized browser freezes plain WebAudio. Other platforms keep `ac.destination`.
+
 ### Moods
 
 `MOODS` lives in `shared/audio.js` and starts with `city` (`usesPad: true`), whose music is the
