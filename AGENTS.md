@@ -21,8 +21,8 @@ history, so trust the code over them.
 
 ## Checks
 
-Run from the repo root, with Node 22+ and nothing to install. Outside Windows, set `BROWSER_PATH` to
-the Edge or Chrome executable first. CI runs the first line.
+Run from the repo root, with Node 22+ and nothing to install. On macOS, set `BROWSER_PATH` to the
+Chrome executable first. CI runs the first line.
 
 ```bash
 node tests/check-story.mjs && node tests/check-focus.mjs && node tests/check-pages.mjs && node tests/check-plants.mjs && node tests/check-walk.mjs && node tests/check-audio.mjs

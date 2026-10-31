@@ -93,8 +93,8 @@ archive's sketch prototype loads Rough.js from a CDN and degrades gracefully off
 ## Tests
 
 The scripts need only Node 22+, no install and no network. All but `check-story` drive a headless
-browser over the Chrome DevTools Protocol: Edge or Chrome is found in its usual Windows path, and
-anywhere else, including macOS, `BROWSER_PATH` must point at the executable. Run them from the
+browser over the Chrome DevTools Protocol: Edge or Chrome is found in its usual Windows or Linux path,
+and on macOS `BROWSER_PATH` must point at the executable. Run them from the
 repository root.
 
 `node tests/check-focus.mjs` checks the focus timer's behaviour in `index.html` — rounds, breaks,
