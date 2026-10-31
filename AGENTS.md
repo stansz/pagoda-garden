@@ -17,7 +17,6 @@ history, so trust the code over them.
   so a format change must still read what is stored.
 - The corner card and its preferences exist separately in each page, so change both.
 - Keep files UTF-8 with LF endings, and never write them with PowerShell `Set-Content`.
-- Pushing to `main` publishes the site, so commit or push only when asked.
 - A user-visible change also updates `README.md` and `docs/REFERENCE.md`.
 
 ## Checks
