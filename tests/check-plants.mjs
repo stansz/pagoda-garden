@@ -59,10 +59,15 @@ try {
     await loadGarden({ clear: false });
     // CI sometimes finds no city save here at all, cause unknown; `saved` shows which side lost it
     const ok = await until(() => evaluate(`(paintBed(), document.getElementById("bedPill").textContent === "seeds 1")`));
-    return ok || evaluate(`({ pill: document.getElementById("bedPill").textContent,
-                              stored: localStorage.getItem(CITY_KEY),
-                              cleared: window.__cleared || 0, keys: Object.keys(localStorage) })`)
-      .then(r => ({ ...r, saved, removeErrors: b.removeErrors }));
+    if (ok) return true;
+    const r = await evaluate(`({ pill: document.getElementById("bedPill").textContent,
+                                 stored: localStorage.getItem(CITY_KEY),
+                                 cleared: window.__cleared || 0, keys: Object.keys(localStorage) })`);
+    // does the city page still see it? read before the page's own code can save over it
+    await b.load(pageUrl("index.html"), { prelude:
+      `window.__atStart = localStorage.getItem("pagoda-pixel-window.v1");` + prelude() });
+    const back = await evaluate(`window.__atStart`);
+    return { ...r, saved, back, removeErrors: b.removeErrors };
   });
 
   await check("planting spends a seed", async () => {
