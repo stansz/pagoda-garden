@@ -55,11 +55,12 @@ try {
       return document.getElementById("focusNote").textContent;
     })()`);
     if (!String(note).includes("seed")) return { note };
+    const saved = await evaluate(`localStorage.getItem("pagoda-pixel-window.v1")`);
     await loadGarden({ clear: false });
-    // the city's save can reach this page just after it paints, so read it again
+    // CI sometimes finds no city save here at all, cause unknown; `saved` shows which side lost it
     const ok = await until(() => evaluate(`(paintBed(), document.getElementById("bedPill").textContent === "seeds 1")`));
     return ok || evaluate(`({ pill: document.getElementById("bedPill").textContent,
-                              stored: localStorage.getItem(CITY_KEY) })`);
+                              stored: localStorage.getItem(CITY_KEY) })`).then(r => ({ ...r, saved }));
   });
 
   await check("planting spends a seed", async () => {
