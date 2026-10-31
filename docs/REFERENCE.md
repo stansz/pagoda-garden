@@ -6,7 +6,8 @@ framework, no bundler. Everything below is what is actually in the repository, n
 ```
 index.html            pixel city view — the front page (markup, stylesheet and script tags)
 city/                 pixel city view code: city.css + one classic script per concern,
-                      with one file per city under city/cities/
+                      with one file per city under city/cities/ and one story per
+                      city under city/stories/
 voxel-garden/index.html     voxel pagoda garden (markup, stylesheet and script tags)
 voxel-garden/js/      the garden's classic scripts (world, render, audio, plants, ui, loop)
 voxel-garden/garden.css     the garden's stylesheet
@@ -122,15 +123,16 @@ the slowest and softest, Sydney bright major. Changing city while playing does n
 anything: `applyChord` builds a new pad layer and crossfades the old one out.
 
 Each layer is five voices (triangle at `f`, sine at `f * 1.0035`, each through a 0.05 gain and a
-stereo panner) into `padFilter`, plus a panned bass layer (sine 0.055 + triangle at twice the
+stereo panner) into `padFilter`, plus a centred bass layer (sine 0.055 + triangle at twice the
 frequency at 0.022). New layers fade in and older layers fade out over `CHORD_FADE = 4` s with
 32-point equal-power curves; frequencies are set once, never automated. Two permanent LFOs
 (0.07 Hz and 0.11 Hz, ±0.012) breathe odd/even voices, and a 0.03 Hz LFO drifts the pad cutoff.
 Chord order is 75 % next in order and 25 % another chord. Plucks use `pluckPick`: chord tones
 (scale notes within 30 cents of a chord pitch class) are preferred 70 % of the time, and the pick
 stays within two scale positions of the last one. Rain follows the scene's rain flag, snow lifts
-the air bed and eases a master lowpass from 18 kHz to 9 kHz, and the focus phase tints the pad
-cutoff (pause 1, focus 0.90, break 1.14). Master level is `vol^1.5 * 2.2 * trim`, where `trim` is
+the air bed and eases a master lowpass from 18 kHz to 9 kHz, the season tints the pad cutoff
+(spring 1.06, summer 1, autumn 0.94, winter 0.88), and the focus phase tints it too (pause 1,
+focus 0.90, break 1.14). Master level is `vol^1.5 * 2.2 * trim`, where `trim` is
 the mood's `level` or the profile's; the default volume is 18 %. The reverb keeps two convolvers
 and crossfades the generated impulse over 1.5 s when a profile's `seconds`/`decay` differ. The
 inline analyser (`master → analyser → destination`) feeds `PIXEL.audio().rms`/`.peak` for the
@@ -148,6 +150,12 @@ moods when sound is already on, fades the pad layers out for a non-pad mood, upd
 trim and saves the preference. To add a mood, define such an object and register it in `MOODS`
 (shared files must keep unique top-level names), give it a `label`, and add its sound however you
 like: `usesPad: false` moods should build their own bus into `mixBus` and a send into `revSend`.
+
+Lo-fi shares one progression, pattern and voice set across cities. The `LOFI` table gives each
+city only a key and a tempo (Hong Kong alone is minor), and a city change lands on the next bar.
+The chord stab sits on step 6 of even bars and step 11 of odd bars, at 40 % either way.
+`LOFI_LEVEL = 0.46` keeps the full-volume peak near 0.9, and `tests/check-audio.mjs` captures every
+sample of the master for 20 s to hold it under 0.98.
 
 ### Controls live in the card
 
@@ -168,21 +176,23 @@ forced `false`. That also removed the old "Scene … cycling" mismatch row in pr
 
 `?city=<id>` on load beats `localStorage`; unknown ids fall back. Selecting a city sets the
 clock to its local hour and fetches Open-Meteo (`current=weather_code,temperature_2m,cloud_cover`,
-`timezone=auto`); the clock re-syncs every 30 s, weather every 15 min or on `↻`. (A hand-picked
-weather leaves location mode. Offline, the clock still works and the weather stays put.
+`timezone=auto`); the clock re-syncs every 30 s, weather every 15 min or on `↻`. Offline, the clock
+still works and the weather stays put.
 
 ### Performance notes
 
-Budget: 60 fps at 2560×1440. Ski frames only repaint the sky when the hour bucket changes; the
+Budget: 60 fps at 2560×1440. Sky frames only repaint the sky when the hour bucket changes; the
 water only on city/resize; layers only when the city, season, size or weather grade changes.
 Firefox gets a smaller backing store because its 2-D path/blit path is slower. `prefers-reduced-motion`
-disables parallax, clouds, birds and the auto day cycle.
+disables parallax, clouds and birds.
 
 ### Headless hook
 
 The page exposes `PIXEL` for the capture harness: `render(city, hour, {rain, snow})`,
 `frame(now)`, `framebuffer()`, `setSeason()`, `layers()`, `treeInfo()`, `treeEmitters()`,
-`bakes()`, `driftParticles()`, `view()`. It exists so the art can be reviewed without a browser.
+`bakes()`, `driftParticles()`, `view()`, plus `audio()`, `audioProfile(id)`, `audioUpdate()`,
+`audioToggle()`, `audioMood(id)`, `selectCity(id)` and `session` for the sound and focus checks. It
+exists so the art can be reviewed without a browser.
 
 ### The Far Light (`city/walk.js`)
 
@@ -263,7 +273,7 @@ The same shared engine as the city page (`shared/audio.js`), with the garden's o
 rain/snow flags and `phase: "idle"`. So the pad, bass and plucks follow the selected place's
 `MUSIC` profile (Vancouver's mellow chords by default), a place change crossfades to the new
 profile, and the `mood` row switches between city and lo-fi exactly as on the city page. The
-music is synthesized: crossfading five-voice pad layers, a panned sub bass, chord-aware "music
+music is synthesized: crossfading five-voice pad layers, a sub bass, chord-aware "music
 box" plucks through a generated convolution reverb (two convolvers, crossfaded on a profile
 change), air and rain beds, a compressor and a soft high shelf. Default volume is 18 %; at that
 setting the city mood measures about −40 dBFS RMS and lo-fi about −39 dBFS, and

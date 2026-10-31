@@ -13,7 +13,7 @@ history, so trust the code over them.
 - Classic scripts share one global scope per page, so search before adding a top-level name. A
   new script needs a tag in its page, and `city/pixel.js` stays last because it boots the page.
 - Time and weather are never controls: scenes follow the city's real clock and sky.
-- `localStorage` keys (`pagoda-*.v1`) hold real players' saves and the pages read each other's,
+- `localStorage` keys (`pagoda-*`, each ending in a version such as `.v1`) hold real players' saves and the pages read each other's,
   so a format change must still read what is stored.
 - The corner card and its preferences exist separately in each page, so change both.
 - Keep files UTF-8 with LF endings, and never write them with PowerShell `Set-Content`.
@@ -21,7 +21,8 @@ history, so trust the code over them.
 
 ## Checks
 
-Run from the repo root, with Node 22+ and nothing to install. CI runs the first line.
+Run from the repo root, with Node 22+ and nothing to install. Outside Windows, set `BROWSER_PATH` to
+the Edge or Chrome executable first. CI runs the first line.
 
 ```bash
 node tests/check-story.mjs && node tests/check-focus.mjs && node tests/check-pages.mjs && node tests/check-plants.mjs && node tests/check-walk.mjs && node tests/check-audio.mjs

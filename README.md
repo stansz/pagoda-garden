@@ -41,9 +41,9 @@ The city page also reads `?city=<id>`, so links can land on a specific city.
 | Ambience | the `sound` row (toggle + volume) and the `mood` row (city or lo-fi); browsers need one click |
 | Back | a `← back to the city` pill appears when you arrive from the city view |
 
-Location, volume, sound preference, mood, zoom, card state, plants and seeds spent are remembered in `localStorage`;
-the garden also remembers whether its sound was on, and a remembered `sound on` waits for the first click before
-starting, because browsers require a gesture.
+Location, volume, sound preference, mood, zoom, card state, plants and seeds spent are remembered in `localStorage`.
+Each page saves its own sound settings, and a remembered `sound on` waits for the first click before starting,
+because browsers require a gesture.
 
 ## How it is built
 
@@ -53,10 +53,10 @@ starting, because browsers require a gesture.
   seasons come from the city's real local date and hemisphere. Drifting petals, seeds and
   leaves are emitted from the tree crowns. The page's CSS and JavaScript live beside it:
   `city/city.css` and classic scripts under `city/` (core, draw, build, one file per city,
-  trees, island, frame, audio, ui, focus, menu, pixel), with the pieces both pages share in
+  trees, island, frame, audio, ui, focus, walk, menu, pixel), with the pieces both pages share in
   `shared/`.
 - **Garden** — 874 voxels in one canvas 2D scene, painter-sorted by face-centre depth, with
-  a fixed light, a time-of-day grade, rain/snow particles, pre-rendered glow sprites and a
+  a fixed light, a time-of-day grade, rain/snow particles, pre-rendered glow sprites and
   the shared WebAudio engine (crossfading pad layers, sub, chord-aware plucks, moods, convolution
   reverb, compressor).
 - **Both** — the same time-of-day table and the same corner card with `Intl` city clocks and
@@ -74,6 +74,7 @@ voxel-garden/js/      the garden's classic scripts (world, render, audio, plants
 voxel-garden/garden.css     the garden's stylesheet
 shared/               code both pages load: time.js, weather.js, audio.js, lofi.js
 proto/                archived style prototypes + their index
+tests/                headless checks, see Tests below
 docs/REFERENCE.md     technical reference
 docs/BUILD-LOG.md     how this got built, decision by decision
 docs/pixel-notes.md   the pixel page's own design notes
@@ -92,7 +93,8 @@ archive's sketch prototype loads Rough.js from a CDN and degrades gracefully off
 ## Tests
 
 The scripts need only Node 22+, no install and no network. All but `check-story` drive a headless
-browser (Edge or Chrome, or set `BROWSER_PATH`) over the Chrome DevTools Protocol. Run them from the
+browser over the Chrome DevTools Protocol: Edge or Chrome is found in its usual Windows path, and
+anywhere else, including macOS, `BROWSER_PATH` must point at the executable. Run them from the
 repository root.
 
 `node tests/check-focus.mjs` checks the focus timer's behaviour in `index.html` — rounds, breaks,
@@ -101,7 +103,7 @@ GitHub Actions on every push to `main` and on pull requests.
 
 `node tests/check-pages.mjs` loads all six cities of `index.html` and `voxel-garden/index.html` with
 a stubbed weather fetch, and checks the place, clock, conditions, canvas pixels, audio profile,
-garden link, city menu, weather buttons, time slider, zoom, garden city picker and back link. It
+garden link, city menu, the removed time and weather controls, zoom, garden city picker and back link. It
 also runs in GitHub Actions.
 
 `node tests/check-audio.mjs` drives both pages' sound: the mood picker, the chord crossfade, pad

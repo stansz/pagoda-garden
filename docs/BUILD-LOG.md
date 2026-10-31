@@ -168,6 +168,18 @@ with the thing it is a reward for. Finishing it gives a lantern seed, which clos
 `check-story` walks every state in every combination of time, weather, season and garden, so a story cannot strand
 anyone, and no ending can demand a snowfall.
 
+## Oct 31 — one sound engine and a lo-fi mood
+
+The two pages had drifted into separate copies of the audio code, so they became one engine in
+`shared/audio.js`, with each page only saying what its scene is through `audioScene()`. Chords now
+crossfade as layers, melodies follow the chord, and a `mood` picker in both cards adds lo-fi, a
+synthesized 16-step beat in `shared/lofi.js`.
+
+The tests passed while parts of it were wrong. The pad drift was wired to nothing, and its links
+leaked one set per chord. Sparse peak readings missed full-volume clipping, and background sound
+hid how quiet the hats were. Each fix came with a check that fails on the old code, and the peak
+check now reads every sample.
+
 ## Things deliberately not done
 
 - **No bundler, no framework, no build step.** Each page is an HTML file plus plain stylesheet
@@ -177,4 +189,3 @@ anyone, and no ending can demand a snowfall.
   deliberately unused.
 - **No seasonal re-bake of the whole city art.** Only the tree and Sydney's grade change with the
   season; skylines and the garden island stay as baked.
-- **No audio on the pixel page.** The garden kept the ambient engine; the city view is silent.
