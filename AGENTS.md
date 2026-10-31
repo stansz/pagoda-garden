@@ -35,3 +35,9 @@ node tests/check-render.mjs
 ```
 
 If the shell cannot start a browser, follow the end of the README's Tests section.
+
+A check that reads a save across pages must not `localStorage.clear()` on the page that writes it:
+the `seeds` check lost its save that way at random in CI. Clear on an earlier load instead.
+
+A check that fails only sometimes is a bug. Read its output and find the cause rather than rerunning
+it or loosening it, and keep random sound levels well inside their limits.

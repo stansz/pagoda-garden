@@ -58,7 +58,7 @@ try {
     if (!String(note).includes("seed")) return { note };
     const saved = await evaluate(`localStorage.getItem("pagoda-pixel-window.v1")`);
     await loadGarden({ clear: false });
-    // CI sometimes finds no city save here at all, cause unknown; `saved` shows which side lost it
+    // a clear on the city page used to lose this save at random in CI; these details show where if it returns
     const ok = await until(() => evaluate(`(paintBed(), document.getElementById("bedPill").textContent === "seeds 1")`));
     if (ok) return true;
     const r = await evaluate(`({ pill: document.getElementById("bedPill").textContent,

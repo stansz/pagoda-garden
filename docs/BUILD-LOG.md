@@ -180,6 +180,12 @@ leaked one set per chord. Sparse peak readings missed full-volume clipping, and 
 hid how quiet the hats were. Each fix came with a check that fails on the old code, and the peak
 check now reads every sample.
 
+Six more moods followed: rain piano, night drive, temple, rain, waves and night. A seed check that
+failed at random in CI lost its save between the two pages. Logging showed the save really was gone,
+and removing the test's own `localStorage.clear()` on the city page stopped it, though why Chrome
+loses the save is still unknown. CI also caught lo-fi peaking just over full scale, so its level came
+down about 1 dB. On Android the sound now goes through an `<audio>` element to survive being minimized.
+
 ## Things deliberately not done
 
 - **No bundler, no framework, no build step.** Each page is an HTML file plus plain stylesheet

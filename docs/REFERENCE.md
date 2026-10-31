@@ -140,8 +140,8 @@ focus 0.90, break 1.14). Master level is `vol^1.5 * 2.2 * trim`, where `trim` is
 the mood's `level` or the profile's; the default volume is 18 %. The reverb keeps two convolvers
 and crossfades the generated impulse over 1.5 s when a profile's `seconds`/`decay` differ. The
 inline analyser (`master → analyser → destination`) feeds `PIXEL.audio().rms`/`.peak` for the
-headless checks; at the default volume the city mood measures about −40 dBFS RMS and lo-fi about
-−39 dBFS, and `tests/check-audio.mjs` requires a steady mean RMS above 0.0065.
+headless checks; at the default volume the city mood and lo-fi both measure about −40 dBFS RMS,
+and `tests/check-audio.mjs` requires a steady mean RMS above 0.0065.
 
 On Android, `audioBackground()` sends the mix through an `<audio>` element with Media Session
 controls, because a minimized browser freezes plain WebAudio. Other platforms keep `ac.destination`.
@@ -156,7 +156,9 @@ when the mood `usesPad`. Selecting a mood never starts sound: `setMood` only sto
 moods when sound is already on, fades the pad layers out for a non-pad mood, updates the master
 trim and saves the preference. To add a mood, define such an object and register it in `MOODS`
 (shared files must keep unique top-level names), give it a `label`, and add its sound however you
-like: `usesPad: false` moods should build their own bus into `mixBus` and a send into `revSend`.
+like: `usesPad: false` moods should build their own bus into `mixBus` and a send into `revSend`,
+which `moodOpen` in `shared/moods.js` does. Notes are random, so leave a mood's `level` clear of
+the `check-audio` limits: a level that only just passes one run will fail a later one.
 
 Lo-fi shares one progression, pattern and voice set across cities. The `LOFI` table gives each
 city only a key and a tempo (Hong Kong alone is minor), and a city change lands on the next bar.
@@ -295,7 +297,7 @@ profile, and the `mood` row switches between all eight moods exactly as on the c
 music is synthesized: crossfading five-voice pad layers, a sub bass, chord-aware "music
 box" plucks through a generated convolution reverb (two convolvers, crossfaded on a profile
 change), air and rain beds, a compressor and a soft high shelf. Default volume is 18 %; at that
-setting the city mood measures about −40 dBFS RMS and lo-fi about −39 dBFS, and
+setting the city mood and lo-fi both measure about −40 dBFS RMS, and
 `tests/check-audio.mjs` requires a steady mean RMS above 0.0065. The lo-fi mood adds its own
 synthesized 16-step beat through the saturating, wow/flutter delay chain.
 

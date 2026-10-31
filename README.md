@@ -43,7 +43,8 @@ The city page also reads `?city=<id>`, so links can land on a specific city.
 
 Location, volume, sound preference, mood, zoom, card state, plants and seeds spent are remembered in `localStorage`.
 Each page saves its own sound settings, and a remembered `sound on` waits for the first click before starting,
-because browsers require a gesture.
+because browsers require a gesture. On Android the sound keeps playing when the browser is minimized,
+with media controls in the notifications.
 
 ## How it is built
 
@@ -108,7 +109,7 @@ also runs in GitHub Actions.
 
 `node tests/check-audio.mjs` drives both pages' sound: the mood picker and all eight moods, the
 chord crossfade, pad drift and reverb swap, chord-aware plucks, the lo-fi beat clock, hat level
-and loudness, the six new moods (rain piano, night drive, temple, rain, waves, night) and their
+and loudness, the six newer moods (rain piano, night drive, temple, rain, waves, night) and their
 restart after sound off and on, the full-volume ceiling, and a saved sound-on lo-fi preference
 after a reload. It also runs in GitHub Actions.
 
