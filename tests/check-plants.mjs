@@ -56,8 +56,10 @@ try {
     })()`);
     if (!String(note).includes("seed")) return { note };
     await loadGarden({ clear: false });
-    const ok = await until(() => evaluate(`document.getElementById("bedPill").textContent === "seeds 1"`));
-    return ok || evaluate(`({ pill: document.getElementById("bedPill").textContent })`);
+    // the city's save can reach this page just after it paints, so read it again
+    const ok = await until(() => evaluate(`(paintBed(), document.getElementById("bedPill").textContent === "seeds 1")`));
+    return ok || evaluate(`({ pill: document.getElementById("bedPill").textContent,
+                              stored: localStorage.getItem(CITY_KEY) })`);
   });
 
   await check("planting spends a seed", async () => {
