@@ -15,6 +15,7 @@ jobs:
         with:
           node-version: 22
       - run: node tests/check-focus.mjs
+      - run: node tests/check-audio.mjs
       - run: node tests/check-pages.mjs
       - run: node tests/check-plants.mjs
       - run: node tests/check-story.mjs

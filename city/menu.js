@@ -60,8 +60,6 @@ function boot(){
   infoSceneEl = document.getElementById("infoScene");
   infoSeasonEl = document.getElementById("infoSeason");
   gardenLink = document.getElementById("gardenLink");
-  sndBtn = document.getElementById("snd");
-  volInput = document.getElementById("vol");
   for(let i = 0; i < wxBtns.length; i++)
     if(wxBtns[i].dataset.wx === "snow") snowBtn = wxBtns[i];
 
@@ -80,23 +78,6 @@ function boot(){
   for(let i = 0; i < wxBtns.length; i++){
     wxBtns[i].addEventListener("click", () => manualWeather(wxBtns[i].dataset.wx));
   }
-
-  if(sndBtn) sndBtn.addEventListener("click", () => {
-    // when the saved preference is "on", the first gesture's pointerdown has
-    // already started the sound — don't let the click that follows toggle it off
-    if(resumeClickGuard){
-      resumeClickGuard = false;
-      const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
-      if(now - resumeClickAt < 900) return;
-    }
-    setSoundOn(!soundOn);
-  });
-  if(volInput) volInput.addEventListener("input", () => {
-    const v = parseFloat(volInput.value);
-    vol = Number.isFinite(v) ? clamp(v, 0, 1) : 0.18;
-    if(ac && soundOn) master.gain.setTargetAtTime(vol * 0.5 * (musicProfile().level || 1), ac.currentTime, 0.2);
-    savePrefsSoon();
-  });
 
   infoHead.addEventListener("click", () => {
     const open = infoEl.classList.contains("closed");
@@ -118,9 +99,7 @@ function boot(){
 
   loadPrefs();
   if(gardenLink) gardenLink.href = "./voxel-garden/?city=" + encodeURIComponent(state.city);
-  if(volInput) volInput.value = String(vol);
-  paintSoundButton();
-  if(soundWanted) armGestureStart();   // never autoplay: wait for the first gesture
+  audioBindUi();                        // never autoplay: a remembered "on" waits for a gesture
   setInterval(updateInfo, 1000);
   setInterval(() => { if(!state.own && state.wxAuto) refreshWeather(); }, 15 * 60 * 1000);
   requestAnimationFrame(tick);

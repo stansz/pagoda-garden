@@ -25,7 +25,7 @@ history, so trust the code over them.
 Run from the repo root, with Node 22+ and nothing to install. CI runs the first line.
 
 ```bash
-node tests/check-story.mjs && node tests/check-focus.mjs && node tests/check-pages.mjs && node tests/check-plants.mjs && node tests/check-walk.mjs
+node tests/check-story.mjs && node tests/check-focus.mjs && node tests/check-pages.mjs && node tests/check-plants.mjs && node tests/check-walk.mjs && node tests/check-audio.mjs
 ```
 
 Run this too after changing what a page draws. It is Windows-only:

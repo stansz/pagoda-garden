@@ -95,7 +95,6 @@ function tick(now){
   if(Math.abs(zoomTarget - zoom) > 0.0008) zoom += (zoomTarget - zoom) * Math.min(1, dt * 9);
 
   updateWeather(dt);
-  updateAudio();
   const active = !reduceMotion || rainAmt > 0.01 || snowAmt > 0.01 || moodAt(hour).night > 0.10 ||
                  Math.abs(zoomTarget - zoom) > 0.0008 || dragging || Math.abs(vel) > 0.001;
   render(now, dt, active);

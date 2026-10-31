@@ -21,7 +21,7 @@ from static files.
 | City | the `city ▾` row inside the top-left card opens the city list (Vancouver, Toronto, Hawai'i, Hong Kong, Amsterdam, Sydney) |
 | Time | *not a control* — the scene always runs on the selected city's real local clock, so the light is whatever it is there right now |
 | Weather | *not a control* — every city always shows its own real sky, which is why the card and the scene agree |
-| Ambience | the `sound` row in the card, with a volume slider — each city has its own chord set, tempo, brightness and reverb |
+| Ambience | the `sound` row (toggle + volume) and the `mood` row — each city has its own chord set, tempo, brightness and reverb, and the `mood` picker adds lo-fi, a synthesized beat over a warm tape chain, to the same engine |
 | Corner card | collapsed it reads `Vancouver 01:22` / `Overcast 7 °C Autumn`; expanded it adds the hemisphere, the weather source and the controls. `↻` refetches that city now; click the header to collapse |
 | Focus timer | the `◷ focus` pill in the bottom-right opens a small panel: 25 or 50 minutes of focus in rounds of 4, a short break after rounds 1–3 (5 or 10 min) and a long one after the 4th (15 or 20 min). `pause`, `+5m` and `skip break` while it runs, plus an optional `auto-start next focus`; `f` starts/stops, `p` pauses, `Esc` closes the panel. A thin line along the bottom edge fills gold through a round and green through a break, and the scene tints slightly cool in focus and warm in a break |
 | The garden | click the pagoda island |
@@ -38,11 +38,12 @@ The city page also reads `?city=<id>`, so links can land on a specific city.
 | Time and weather | *not controls* — the garden always follows its city's real clock and sky |
 | City | the `city` row in the card; `?city=<id>` lands on one, otherwise the last one you chose, otherwise Vancouver |
 | Seeds | each finished focus round in the city earns one; the `seeds` pill picks what to plant, then tap the grass; finishing The Far Light adds a lantern seed |
-| Ambience | `sound` (browsers need one click), volume slider |
+| Ambience | the `sound` row (toggle + volume) and the `mood` row (city or lo-fi); browsers need one click |
 | Back | a `← back to the city` pill appears when you arrive from the city view |
 
-Location, volume, sound preference, zoom, card state, plants and seeds spent are remembered in `localStorage`;
-a remembered `sound on` waits for the first click before starting, because browsers require a gesture.
+Location, volume, sound preference, mood, zoom, card state, plants and seeds spent are remembered in `localStorage`;
+the garden also remembers whether its sound was on, and a remembered `sound on` waits for the first click before
+starting, because browsers require a gesture.
 
 ## How it is built
 
@@ -56,7 +57,8 @@ a remembered `sound on` waits for the first click before starting, because brows
   `shared/`.
 - **Garden** — 874 voxels in one canvas 2D scene, painter-sorted by face-centre depth, with
   a fixed light, a time-of-day grade, rain/snow particles, pre-rendered glow sprites and a
-  small WebAudio ambient engine (pad, sub, plucks, convolution reverb, compressor).
+  the shared WebAudio engine (crossfading pad layers, sub, chord-aware plucks, moods, convolution
+  reverb, compressor).
 - **Both** — the same time-of-day table and the same corner card with `Intl` city clocks and
   [Open-Meteo](https://open-meteo.com/) conditions (no API key, no account).
 
@@ -70,7 +72,7 @@ city/                 pixel city view code: city.css + one classic script per co
 voxel-garden/index.html     voxel garden: markup, stylesheet and script tags
 voxel-garden/js/      the garden's classic scripts (world, render, audio, plants, ui, loop)
 voxel-garden/garden.css     the garden's stylesheet
-shared/               code both pages load: time.js, weather.js, audio.js
+shared/               code both pages load: time.js, weather.js, audio.js, lofi.js
 proto/                archived style prototypes + their index
 docs/REFERENCE.md     technical reference
 docs/BUILD-LOG.md     how this got built, decision by decision
@@ -101,6 +103,11 @@ GitHub Actions on every push to `main` and on pull requests.
 a stubbed weather fetch, and checks the place, clock, conditions, canvas pixels, audio profile,
 garden link, city menu, weather buttons, time slider, zoom, garden city picker and back link. It
 also runs in GitHub Actions.
+
+`node tests/check-audio.mjs` drives both pages' sound: the mood picker, the chord crossfade, pad
+drift and reverb swap, chord-aware plucks, the lo-fi beat clock, hat level and loudness, the
+full-volume ceiling, and a saved sound-on lo-fi preference after a reload. It also runs in GitHub
+Actions.
 
 `node tests/check-plants.mjs` seeds the garden's `localStorage` with focus marks and stored plants,
 then checks the `seeds` pill and panel, planting by tap (and refusing on water, paths, the pagoda

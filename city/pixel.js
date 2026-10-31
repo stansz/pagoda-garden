@@ -66,7 +66,11 @@ const PIXEL = {
       armed: gestureArmed,
       city: state.city,
       profile: prof.name,
+      mood: moodId,
       rms: audioRms(),
+      peak: audioPeak(),
+      padLayers: padLayers.length,
+      beat: { bar: lofiBar, step: lofiStep },
       chord: { bass: ch.bass, pad: ch.pad.slice() },
       chords: prof.chords.map(c => ({ bass: c.bass, pad: c.pad.slice() })),
       hold: prof.hold,
@@ -94,8 +98,9 @@ const PIXEL = {
       scale: p.scale.slice()
     };
   },
-  audioUpdate(){ updateAudio(); return PIXEL.audio(); },
+  audioUpdate(){ updateAudio(true); return PIXEL.audio(); },
   audioToggle(){ return setSoundOn(!soundOn); },
+  audioMood(id){ setMood(id); return moodId; },
   session: {
     get(){ return { kind: session.kind, breakType: session.breakType, lenMin: session.lenMin,
                     leftMs: sessionLeftMs(), totalMs: session.totalMs,

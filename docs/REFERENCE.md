@@ -10,20 +10,24 @@ city/                 pixel city view code: city.css + one classic script per co
 voxel-garden/index.html     voxel pagoda garden (markup, stylesheet and script tags)
 voxel-garden/js/      the garden's classic scripts (world, render, audio, plants, ui, loop)
 voxel-garden/garden.css     the garden's stylesheet
-shared/               code both pages load: time.js, weather.js, audio.js
+shared/               code both pages load: time.js, weather.js, audio.js, lofi.js
 proto/index.html      archive index for the two losing prototypes
 proto/silhouette/     flat parallax prototype (vanilla canvas)
 proto/sketch/         Rough.js sketchbook prototype (CDN, degrades offline)
 docs/                 this file, the build log, pixel notes, stills
 ```
 
-Both pages load three shared scripts first, then their own files in order:
+Both pages load four shared scripts first, then their own files in order:
 
 - `shared/time.js` — the time-of-day table (`MOOD` + `moodAt(hour)` — sky top/bottom, a tint
   and a night factor) plus `clamp`, `pad2` and `ownHour`;
 - `shared/weather.js` — the WMO code mapping (`wxToCode`, `condLabel`);
-- `shared/audio.js` — the generated impulse-response and noise helpers (`makeImpulse`,
-  `makeNoise`).
+- `shared/audio.js` — the whole sound engine: the per-city `MUSIC` table, crossfading pad
+  layers, chord-aware plucks, the two-convolver reverb, air/rain beds, the `MOODS` table,
+  `audioBindUi()`, the scheduler and the `makeImpulse`/`makeNoise` generators;
+- `shared/lofi.js` — the lo-fi mood: a 16-step beat clock, synthesized FM piano/kick/snare/hat/bass,
+  the tape-style saturation/delay chain and a generated crackle bed. The hat joins after the
+  saturator and lowpass so it stays bright. It registers `MOODS.lofi`.
 
 The corner card and the `localStorage` prefs are still implemented separately in each page and
 deliberately kept in sync by hand.
@@ -108,24 +112,50 @@ re-bakes once; frames never re-bake.
 
 ### Audio (city page)
 
-Same engine as the garden (pad + sub + plucks + generated convolution reverb + compressor), but the
-city owns the music through a `MUSIC` table keyed by city id: four chords (`{bass, pad:[5]}`), a
-chord-hold of 11–16 s, a pad cutoff, a pluck scale/tempo, a reverb length/decay/wet, an air level and
-a master trim. Vancouver is mellow/low/slow, Toronto warm mid-tempo, Hawai'i bright and high with
-frequent plucks, Hong Kong dark and reverberant, Amsterdam the slowest and softest, Sydney bright
-major. Changing city while playing glides the existing oscillators (`setTargetAtTime` ~2.5 s) and
-eases cutoff and wet — no restart. Rain follows `state.rainAmt`, snow lifts the air bed and eases a
-master lowpass from 18 kHz to 9 kHz, and the season tints the pad cutoff (±6–12 %). Default volume is
-18 %; the inline analyser (`master → analyser → destination`) feeds `PIXEL.audio().rms` for the
-headless checks.
+The sound is the shared engine in `shared/audio.js`; `city/audio.js` is only the page's
+`audioScene()` adapter (`{ city, season, rain, snow, phase }`, where `phase` is `"pause"` or the
+session kind). The city owns the harmony through the `MUSIC` table keyed by city id: four chords
+(`{bass, pad:[5]}`), a chord-hold of 11–16 s, a pad cutoff, a pluck scale/tempo, a reverb
+length/decay/wet, an air level and a master trim. Vancouver is mellow/low/slow, Toronto warm
+mid-tempo, Hawai'i bright and high with frequent plucks, Hong Kong dark and reverberant, Amsterdam
+the slowest and softest, Sydney bright major. Changing city while playing does not restart
+anything: `applyChord` builds a new pad layer and crossfades the old one out.
+
+Each layer is five voices (triangle at `f`, sine at `f * 1.0035`, each through a 0.05 gain and a
+stereo panner) into `padFilter`, plus a panned bass layer (sine 0.055 + triangle at twice the
+frequency at 0.022). New layers fade in and older layers fade out over `CHORD_FADE = 4` s with
+32-point equal-power curves; frequencies are set once, never automated. Two permanent LFOs
+(0.07 Hz and 0.11 Hz, ±0.012) breathe odd/even voices, and a 0.03 Hz LFO drifts the pad cutoff.
+Chord order is 75 % next in order and 25 % another chord. Plucks use `pluckPick`: chord tones
+(scale notes within 30 cents of a chord pitch class) are preferred 70 % of the time, and the pick
+stays within two scale positions of the last one. Rain follows the scene's rain flag, snow lifts
+the air bed and eases a master lowpass from 18 kHz to 9 kHz, and the focus phase tints the pad
+cutoff (pause 1, focus 0.90, break 1.14). Master level is `vol^1.5 * 2.2 * trim`, where `trim` is
+the mood's `level` or the profile's; the default volume is 18 %. The reverb keeps two convolvers
+and crossfades the generated impulse over 1.5 s when a profile's `seconds`/`decay` differ. The
+inline analyser (`master → analyser → destination`) feeds `PIXEL.audio().rms`/`.peak` for the
+headless checks; at the default volume the city mood measures about −40 dBFS RMS and lo-fi about
+−37 dBFS, and `tests/check-audio.mjs` requires a steady mean RMS above 0.0065.
+
+### Moods
+
+`MOODS` lives in `shared/audio.js` and starts with `city` (`usesPad: true`), whose music is the
+selected city's `MUSIC` profile. `shared/lofi.js` adds `lofi` (`usesPad: false`). A mood object
+may define `label, usesPad, level, start(t), stop(t), tick(now, horizon)`; the scheduler calls
+the active mood's `tick` every 250 ms with a 2 s horizon, and runs the chord/pluck branches only
+when the mood `usesPad`. Selecting a mood never starts sound: `setMood` only stops/starts the
+moods when sound is already on, fades the pad layers out for a non-pad mood, updates the master
+trim and saves the preference. To add a mood, define such an object and register it in `MOODS`
+(shared files must keep unique top-level names), give it a `label`, and add its sound however you
+like: `usesPad: false` moods should build their own bus into `mixBus` and a send into `revSend`.
 
 ### Controls live in the card
 
 There is no bottom bar. The corner card is the whole interface: its header is the collapsed state
 (city, real local clock, `↻`, chevron), a summary line under it shows the live condition, temperature
 and season (`#infoSum`, hidden once the card is open), and the expanded body holds the hemisphere,
-the weather source and two control rows — `city ▾` (dropdown, opens under the button, closes on outside click/Escape) and
-`sound` (toggle + volume). The art keeps the entire lower screen, so the pagoda island is never
+the weather source and three control rows — `city ▾` (dropdown, opens under the button, closes on outside click/Escape),
+`sound` (toggle + volume) and `mood` (city or lo-fi). The art keeps the entire lower screen, so the pagoda island is never
 covered; because the scene is cover-cropped, portrait windows (`height > 0.95 × width`) bias the crop
 toward the left so the island stays on screen and clickable.
 
@@ -228,18 +258,25 @@ back in after; `prefers-reduced-motion` turns it off.
 
 ### Audio
 
-WebAudio, all synthesized: a five-voice pad (triangle + detuned sine) through a 1.5 kHz
-lowpass moving through Dmaj9 → Bm7 → Gmaj7 → Aadd9 every 11–14 s; a sine sub; sparse
-"music box" plucks in D pentatonic; air and a rain bed; a `ConvolverNode` whose impulse
-response is generated in the page; a compressor and a soft high shelf on the master, default
-volume 18 % (≈ −49 dBFS RMS).
+The same shared engine as the city page (`shared/audio.js`), with the garden's own adapter in
+`voxel-garden/js/audio.js`: `audioScene()` returns the selected place's id, `season: ""`, its
+rain/snow flags and `phase: "idle"`. So the pad, bass and plucks follow the selected place's
+`MUSIC` profile (Vancouver's mellow chords by default), a place change crossfades to the new
+profile, and the `mood` row switches between city and lo-fi exactly as on the city page. The
+music is synthesized: crossfading five-voice pad layers, a panned sub bass, chord-aware "music
+box" plucks through a generated convolution reverb (two convolvers, crossfaded on a profile
+change), air and rain beds, a compressor and a soft high shelf. Default volume is 18 %; at that
+setting the city mood measures about −40 dBFS RMS and lo-fi about −37 dBFS, and
+`tests/check-audio.mjs` requires a steady mean RMS above 0.0065. The lo-fi mood adds its own
+synthesized 16-step beat through the saturating, wow/flutter delay chain.
 
 ### Controls live in the card
 
 There is no bottom bar. The corner card is the whole interface: its header is the collapsed state (city,
 real local clock, `↻`, chevron), and the expanded body holds the condition and temperature, a meta line
-with the weather source, and three control rows — `city` (a dropdown that opens under the button and
-picks whose real clock and live sky the scene follows), `sound` (toggle + volume) and `zoom` (`−` / `+`).
+with the weather source, and four control rows — `city` (a dropdown that opens under the button and
+picks whose real clock and live sky the scene follows), `sound` (toggle + volume), `mood` (city or
+lo-fi) and `zoom` (`−` / `+`).
 Time and weather are not controls any more: `hour` is resynced from the chosen city's real local clock
 once a second, and its weather is fetched from Open-Meteo every 15 minutes or on `↻`. Start-up uses
 `?city=<id>` if it names a city, otherwise the last city chosen, otherwise Vancouver. Drag, wheel,

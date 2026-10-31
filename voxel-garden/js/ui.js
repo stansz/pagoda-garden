@@ -1,8 +1,6 @@
 "use strict";
 
 /* ---------------------------------------------------------------------- UI */
-const sndBtn = document.getElementById("snd");
-const volInput = document.getElementById("vol");
 const hint = document.getElementById("hint");
 const zinBtn = document.getElementById("zin");
 const zoutBtn = document.getElementById("zout");
@@ -115,6 +113,7 @@ function selectPlace(ix){
   updatePlaceLabel();
   refreshPlaceWeather();
   updateInfo();
+  if(ac && soundOn) applyProfile(ac.currentTime);
   savePrefs();
 }
 
@@ -210,20 +209,6 @@ setInterval(() => {
 setInterval(() => { if(wxAuto) refreshPlaceWeather(); }, 15 * 60 * 1000);
 
 
-sndBtn.addEventListener("click", async () => {
-  if(!audioInit()) return;
-  try { await ac.resume(); } catch(e){}
-  if(soundOn) stopSound(); else startSound();
-  sndBtn.setAttribute("aria-pressed", String(soundOn));
-  sndBtn.textContent = soundOn ? "sound on" : "sound";
-});
-
-volInput.addEventListener("input", () => {
-  vol = parseFloat(volInput.value);
-  if(ac && soundOn) master.gain.setTargetAtTime(vol * 0.5, ac.currentTime, 0.2);
-  savePrefs();
-});
-
 function nudgeZoom(factor){
   zoomTarget = clamp(zoomTarget * factor, ZOOM_MIN, ZOOM_MAX);
   savePrefsSoon();
@@ -240,7 +225,8 @@ function savePrefs(){
   try {
     localStorage.setItem(PREF_KEY, JSON.stringify({
       vol, zoom: +zoomTarget.toFixed(3), place: placeIx,
-      infoOpen: !info.classList.contains("closed")
+      infoOpen: !info.classList.contains("closed"),
+      soundOn: soundWanted || soundOn, mood: moodId
     }));
   } catch(e){}
 }
@@ -248,14 +234,17 @@ function loadPrefs(){
   let p = null;
   try { p = JSON.parse(localStorage.getItem(PREF_KEY) || "null"); } catch(e){}
   if(!p) return null;
-  if(typeof p.vol === "number"){ vol = p.vol; volInput.value = String(vol); }
+  if(Number.isFinite(p.vol)){ vol = clamp(p.vol, 0, 1); }
   if(Number.isFinite(p.zoom)){ zoom = zoomTarget = clamp(p.zoom, ZOOM_MIN, ZOOM_MAX); }
   if(typeof p.infoOpen === "boolean"){ info.classList.toggle("closed", !p.infoOpen); }
+  soundWanted = p.soundOn === true;
+  if(MOODS[p.mood]) moodId = p.mood;
   return p;
 }
 
 // the URL wins over remembered state; otherwise the last city, otherwise Vancouver
 const savedPrefs = loadPrefs();
+audioBindUi();
 let startIx = savedPrefs && Number.isInteger(savedPrefs.place) && PLACES[savedPrefs.place] ? savedPrefs.place : 0;
 const queryKey = cityFromQuery();
 if(queryKey){

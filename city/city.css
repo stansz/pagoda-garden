@@ -5,6 +5,8 @@
   #infoBody .ctl{display:flex;align-items:center;gap:6px;margin-top:5px}
   #infoBody .ctl .lbl{color:#8fa0a9;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;min-width:32px}
   #infoBody .ctl button{padding:4px 7px}
+  #infoBody .ctl select{font:inherit;color:#c6d2d9;background:rgba(255,255,255,.055);
+      border:1px solid rgba(255,255,255,.11);border-radius:8px;padding:4px 7px;cursor:pointer}
   #infoBody #hour{width:74px}
   #infoBody #vol{width:46px}
   button{font:inherit;color:#c6d2d9;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.11);

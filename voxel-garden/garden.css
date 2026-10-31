@@ -44,6 +44,8 @@
   #infoBody .ctl{display:flex;align-items:center;gap:6px;margin-top:5px}
   #infoBody .ctl .lbl{color:#8fa0a9;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;min-width:32px}
   #infoBody .ctl button{padding:4px 7px}
+  #infoBody .ctl select{font:inherit;color:#cfdae2;background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:4px 7px;cursor:pointer}
   #infoBody #vol{width:46px}
   @media (max-width:620px){ #info{top:10px;left:10px;min-width:150px} }
   /* the way back to the city page: the bar's glass, top-right, out of the way */

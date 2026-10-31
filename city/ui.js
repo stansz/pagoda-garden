@@ -235,7 +235,7 @@ function savePrefs(){
     localStorage.setItem(PREF_KEY, JSON.stringify({
       city: state.city, hour: +state.hour.toFixed(3), cycleOn: state.cycleOn,
       own: state.own, wx: state.wx, vol: +vol.toFixed(3),
-      soundOn: soundWanted || soundOn,
+      soundOn: soundWanted || soundOn, mood: moodId,
       infoOpen: !infoEl.classList.contains("closed"),
       session: sessionSave()
     }));
@@ -258,6 +258,7 @@ function loadPrefs(){
   // is only honoured on the first gesture (never autoplay)
   if(pr && Number.isFinite(pr.vol)) vol = clamp(pr.vol, 0, 1);
   soundWanted = !!(pr && pr.soundOn === true);
+  if(pr && MOODS[pr.mood]) moodId = pr.mood;
   if(freshCity){
     state.own = false;
     state.wxAuto = true;

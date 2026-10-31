@@ -721,9 +721,6 @@ function offsets(now){
 
 /* -------------------------------------------------------------------- frame */
 function drawFrame(now, dt){
-  // keep the ambience in step with the weather (rain amount, snow dulling the
-  // top end) and the season; a no-op until sound has been started once
-  if(ac) updateAudio();
   // the season can roll over from the info-card interval; the guard means the
   // layers are rebuilt exactly once and every other frame is a pure blit
   if(!scene || scene.id !== state.city || scene.season !== state.season ||
