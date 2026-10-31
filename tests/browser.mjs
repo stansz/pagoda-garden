@@ -99,10 +99,12 @@ export async function launch() {
   }
 
   let preludeId = null;
+  const removeErrors = [];
 
   async function load(url, { prelude } = {}) {
     if (preludeId) {
-      try { await send("Page.removeScriptToEvaluateOnNewDocument", { identifier: preludeId }); } catch {}
+      try { await send("Page.removeScriptToEvaluateOnNewDocument", { identifier: preludeId }); }
+      catch (e) { removeErrors.push(String(e.message || e)); }
       preludeId = null;
     }
     if (typeof prelude === "string") {
@@ -164,7 +166,7 @@ export async function launch() {
     throw e;
   }
 
-  return { send, evaluate, load, exceptions, close };
+  return { send, evaluate, load, exceptions, removeErrors, close };
 }
 
 /* ------------------------------------------------- shared PASS/FAIL harness */

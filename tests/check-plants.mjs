@@ -13,7 +13,7 @@ const H = 3600000;
 // Open-Meteo request with Overcast and 7 °C (or the requested weather code).
 function prelude({ clear = false, marks, store, code = 3 } = {}) {
   return `
-${clear ? "try{localStorage.clear()}catch(e){}" : ""}
+${clear ? "try{localStorage.clear();window.__cleared=(window.__cleared||0)+1}catch(e){}" : ""}
 ${typeof marks === "number"
     ? `try{localStorage.setItem("pagoda-pixel-window.v1", JSON.stringify({ session: { marks: ${JSON.stringify(marks)} } }))}catch(e){}`
     : ""}
@@ -60,7 +60,9 @@ try {
     // CI sometimes finds no city save here at all, cause unknown; `saved` shows which side lost it
     const ok = await until(() => evaluate(`(paintBed(), document.getElementById("bedPill").textContent === "seeds 1")`));
     return ok || evaluate(`({ pill: document.getElementById("bedPill").textContent,
-                              stored: localStorage.getItem(CITY_KEY) })`).then(r => ({ ...r, saved }));
+                              stored: localStorage.getItem(CITY_KEY),
+                              cleared: window.__cleared || 0, keys: Object.keys(localStorage) })`)
+      .then(r => ({ ...r, saved, removeErrors: b.removeErrors }));
   });
 
   await check("planting spends a seed", async () => {
