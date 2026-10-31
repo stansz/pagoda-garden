@@ -1,6 +1,8 @@
-// Headless checks for the shared sound engine: moods, chord crossfade, reverb
-// swap, chord-aware plucks, the lo-fi beat clock and its loudness, the saved
-// preferences on both pages, and the garden's music following its place.
+// Headless checks for the shared sound engine: the mood picker and all eight
+// moods (city, lo-fi, rain piano, night drive, temple, rain, waves, night),
+// chord crossfade, reverb swap, chord-aware plucks, the lo-fi beat clock and
+// its loudness, the saved preferences on both pages, and the garden's music
+// following its place.
 //   node tests/check-audio.mjs
 import { launch, until, check, report, pageUrl, sleep } from "./browser.mjs";
 
@@ -41,6 +43,7 @@ async function meanRms(evaluate) {
 }
 
 const PITCH_CENTS = `f => { const x = Math.log2(f / 440) * 1200; return ((x % 1200) + 1200) % 1200; }`;
+const MOOD_IDS = ["city", "lofi", "rainpiano", "drive", "temple", "rain", "waves", "night"];
 
 let b = null;
 try {
@@ -58,7 +61,7 @@ try {
       ac: ac === null,
       value: document.getElementById("mood").value
     }))()`);
-    return (r.options.length === 2 && r.options[0] === "city" && r.options[1] === "lofi" &&
+    return (JSON.stringify(r.options) === JSON.stringify(MOOD_IDS) &&
       r.mood === "city" && r.ac === true && r.value === "city") || r;
   });
 
@@ -226,7 +229,7 @@ try {
       options: [...document.querySelectorAll("#mood option")].map(o => o.value)
     }))()`);
     return (r.name.startsWith("hongkong") &&
-      r.options.length === 2 && r.options[0] === "city" && r.options[1] === "lofi") || r;
+      JSON.stringify(r.options) === JSON.stringify(MOOD_IDS)) || r;
   });
 
   await check("garden sound, place change and saved mood", async () => {
@@ -291,6 +294,72 @@ try {
     const hat = await hit("lofiHat");
     const snare = await hit("lofiSnare");
     return (hat >= snare * 0.09 && hat <= snare / 3) || { hat, snare };
+  });
+
+  await load("index.html?city=vancouver");
+  await evaluate(`PIXEL.audioToggle()`);
+  await until(() => evaluate(`PIXEL.audio().state === "running"`), 6000);
+
+  for (const id of MOOD_IDS.slice(2)) {
+    await check(`${id} mood is audible and stays below full scale`, async () => {
+      await evaluate(`PIXEL.audioMood(${JSON.stringify(id)})`);
+      await sleep(3000);
+      await evaluate(`(() => {
+        vol = 1;
+        master.gain.cancelScheduledValues(ac.currentTime);
+        master.gain.value = masterLevel();
+      })()`);
+      await evaluate(`(() => {
+        window.__moodMax = 0;
+        window.__moodSum = 0;
+        window.__moodCount = 0;
+        const sp = ac.createScriptProcessor(1024, 2, 1);
+        const zero = ac.createGain(); zero.gain.value = 0;
+        master.connect(sp); sp.connect(zero); zero.connect(ac.destination);
+        sp.onaudioprocess = e => {
+          for (let c = 0; c < 2; c++) {
+            const d = e.inputBuffer.getChannelData(c);
+            for (let i = 0; i < d.length; i++) {
+              const v = d[i];
+              window.__moodMax = Math.max(window.__moodMax, Math.abs(v));
+              window.__moodSum += v * v;
+              window.__moodCount++;
+            }
+          }
+        };
+        window.__moodTap = sp;
+      })()`);
+      await sleep(12000);
+      const r = await evaluate(`(() => {
+        master.disconnect(window.__moodTap);
+        window.__moodTap.disconnect();
+        return { max: window.__moodMax,
+                 rms: Math.sqrt(window.__moodSum / Math.max(1, window.__moodCount)) };
+      })()`);
+      const layers = await evaluate(`padLayers.length`);
+      const usesPad = await evaluate(`MOODS[${JSON.stringify(id)}].usesPad`);
+      return (r.max > 0.1 && r.max <= 0.98 && r.rms >= 0.06 && r.rms <= 0.40 &&
+        layers === 0 && usesPad === false) || { max: r.max, rms: r.rms, layers };
+    });
+  }
+
+  await check("moods leave nothing running", async () => {
+    await evaluate(`PIXEL.audioMood("city")`);
+    await sleep(4000);
+    const count = await evaluate(`moodVoices.length`);
+    return count === 0 || count;
+  });
+
+  await check("every mood restarts after sound off and on", async () => {
+    await evaluate(`PIXEL.audioMood("waves")`);
+    await evaluate(`PIXEL.audioToggle()`);
+    const suspended = await until(() => evaluate(`ac && ac.state === "suspended"`), 4000);
+    await evaluate(`PIXEL.audioToggle()`);
+    const running = await until(() => evaluate(`PIXEL.audio().state === "running"`), 6000);
+    await sleep(1000);
+    const r = await evaluate(`(() => ({ mood: PIXEL.audio().mood, voices: moodVoices.length }))()`);
+    return (suspended && running && r.mood === "waves" && r.voices >= 1) ||
+      { suspended, running, mood: r.mood, voices: r.voices };
   });
 
   await check("no uncaught page exceptions", async () => b.exceptions.length === 0 || b.exceptions.slice(0, 3));

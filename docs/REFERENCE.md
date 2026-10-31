@@ -11,14 +11,14 @@ city/                 pixel city view code: city.css + one classic script per co
 voxel-garden/index.html     voxel pagoda garden (markup, stylesheet and script tags)
 voxel-garden/js/      the garden's classic scripts (world, render, audio, plants, ui, loop)
 voxel-garden/garden.css     the garden's stylesheet
-shared/               code both pages load: time.js, weather.js, audio.js, lofi.js
+shared/               code both pages load: time.js, weather.js, audio.js, lofi.js, moods.js
 proto/index.html      archive index for the two losing prototypes
 proto/silhouette/     flat parallax prototype (vanilla canvas)
 proto/sketch/         Rough.js sketchbook prototype (CDN, degrades offline)
 docs/                 this file, the build log, pixel notes, stills
 ```
 
-Both pages load four shared scripts first, then their own files in order:
+Both pages load five shared scripts first, then their own files in order:
 
 - `shared/time.js` — the time-of-day table (`MOOD` + `moodAt(hour)` — sky top/bottom, a tint
   and a night factor) plus `clamp`, `pad2` and `ownHour`;
@@ -29,6 +29,10 @@ Both pages load four shared scripts first, then their own files in order:
 - `shared/lofi.js` — the lo-fi mood: a 16-step beat clock, synthesized FM piano/kick/snare/hat/bass,
   the tape-style saturation/delay chain and a generated crackle bed. The hat joins after the
   saturator and lowpass so it stays bright. It registers `MOODS.lofi`.
+- `shared/moods.js` — six more moods: rain piano, night drive and temple make music from the city's
+  `MUSIC` chords and scale, while rain, waves and night are ambient beds. Each builds its graph in
+  `start`, closes it in `stop` and schedules ahead in `tick`; the file registers them all in
+  `MOODS`.
 
 The corner card and the `localStorage` prefs are still implemented separately in each page and
 deliberately kept in sync by hand.
@@ -157,13 +161,25 @@ The chord stab sits on step 6 of even bars and step 11 of odd bars, at 40 % eith
 `LOFI_LEVEL = 0.46` keeps the full-volume peak near 0.9, and `tests/check-audio.mjs` captures every
 sample of the master for 20 s to hold it under 0.98.
 
+`shared/moods.js` adds six moods. Rain piano drops sparse piano notes over a filtered rain bed,
+with chords every half of the city's `hold`; night drive is a fixed 84 BPM grid of saw bass, kick,
+snare, a detuned five-voice pad and an arpeggio, changing chord every two bars; temple holds a drone
+on the city's root bass with long bells and gongs. Rain, waves and night play no chords, plucks or
+bass notes: rain has a bright body, a rumble and about four drops a second; waves overlap long
+filtered swells with foam; night has a moving wind band and two crickets. The music moods read
+`musicProfile()` when they schedule each note, so `chords`, `scale` and `hold` follow the selected
+city and a city change lands by itself on the next chord, bell or gong. A mood that is not playing
+holds no running nodes: each owns one `moodRun` graph, built in `start`, closed in `stop`, and its
+`tick` schedules from a `while(next < horizon)` loop with a guard.
+
 ### Controls live in the card
 
 There is no bottom bar. The corner card is the whole interface: its header is the collapsed state
 (city, real local clock, `↻`, chevron), a summary line under it shows the live condition, temperature
 and season (`#infoSum`, hidden once the card is open), and the expanded body holds the hemisphere,
 the weather source and three control rows — `city ▾` (dropdown, opens under the button, closes on outside click/Escape),
-`sound` (toggle + volume) and `mood` (city or lo-fi). The art keeps the entire lower screen, so the pagoda island is never
+`sound` (toggle + volume) and `mood` (all eight: city, lo-fi, rain piano, night drive, temple, rain,
+waves, night). The art keeps the entire lower screen, so the pagoda island is never
 covered; because the scene is cover-cropped, portrait windows (`height > 0.95 × width`) bias the crop
 toward the left so the island stays on screen and clickable.
 
@@ -272,7 +288,7 @@ The same shared engine as the city page (`shared/audio.js`), with the garden's o
 `voxel-garden/js/audio.js`: `audioScene()` returns the selected place's id, `season: ""`, its
 rain/snow flags and `phase: "idle"`. So the pad, bass and plucks follow the selected place's
 `MUSIC` profile (Vancouver's mellow chords by default), a place change crossfades to the new
-profile, and the `mood` row switches between city and lo-fi exactly as on the city page. The
+profile, and the `mood` row switches between all eight moods exactly as on the city page. The
 music is synthesized: crossfading five-voice pad layers, a sub bass, chord-aware "music
 box" plucks through a generated convolution reverb (two convolvers, crossfaded on a profile
 change), air and rain beds, a compressor and a soft high shelf. Default volume is 18 %; at that

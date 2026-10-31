@@ -1,37 +1,36 @@
 ## Goal
 
-Make the `lo-fi hat is audible and sits under the snare` check in `tests/check-audio.mjs` immune to the background beds, so it fails on a quiet hat.
-
-The working tree already holds uncommitted work. Keep all of it. Change only what is listed here.
+Fix four defects in the uncommitted six-mood work in `shared/moods.js` and `tests/check-audio.mjs`,
+so that the mood loudness checks pass with a margin instead of by chance.
 
 ## Files to touch
 
+- `shared/moods.js`
 - `tests/check-audio.mjs`
 
 ## Steps
 
-In the check named `lo-fi hat is audible and sits under the snare`, replace these lines:
-
-```js
-      setInterval(() => {
-        const t = ac.currentTime;
-        [airGain, rainGain].forEach(g => { g.gain.cancelScheduledValues(t); g.gain.value = 0; });
-      }, 20);
-```
-
-with:
-
-```js
-      airGain.disconnect(); rainGain.disconnect();
-```
+1. `shared/moods.js`, `moodDriveBass`: remove the `extra` oscillator. Use one sawtooth whose
+   frequency is `freq < 55 ? freq * 2 : freq`.
+2. `shared/moods.js`, registry: change `MOODS["waves"]` to `MOODS.waves`, and change
+   `MOODS["waves"]` to `MOODS.waves` in the header comment.
+3. `shared/moods.js`, registry: set these `level` values exactly: `rainpiano` 1.4, `drive` 0.72,
+   `temple` 0.8, `rain` 1.1, `waves` 1.15, `night` 2.5.
+4. `tests/check-audio.mjs`, the per-mood check: change `r.rms >= 0.08` to `r.rms >= 0.06`. Leave
+   `r.max <= 0.98` and the other limits as they are.
 
 ## Acceptance
 
-Run from the repo root. On this Mac, first run `export BROWSER_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`.
+Run from the repo root. Export this first:
 
-- `node tests/check-audio.mjs` exits 0 with 17 of 17 checks passing.
-- `grep -c "setInterval" tests/check-audio.mjs` prints `0`.
-- `grep -c "airGain.disconnect(); rainGain.disconnect();" tests/check-audio.mjs` prints `1`.
+    export BROWSER_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
+If the browser cannot start in this shell, run `CI=1 node tests/start-browser.mjs` first, add
+`CHECK_ATTACH=1` to the command below, and run `node tests/start-browser.mjs --stop` at the end.
+
+- `node tests/check-audio.mjs` exits 0.
+- `grep -c 'MOODS\["waves"\]' shared/moods.js` prints `0`.
+- `grep -c 'extra' shared/moods.js` prints `0`.
 
 ## Parallel work
 
@@ -41,13 +40,14 @@ None — do it sequentially.
 
 - Do not commit, push, or switch branches.
 - Do not touch files outside **Files to touch** except `.handoff/report.md`.
-- Do not revert, reformat or rewrite any existing uncommitted change.
-- Do not change any check's thresholds.
+- Do not change any value other than those named in **Steps**. If `check-audio` fails, do not tune
+  anything: report the failure output.
+- Run no CPU stress or load tests. Run only the commands in **Acceptance**.
 
 ## Out of scope
 
-- Every other check and every other file.
+- Everything else in the mood work, including docs and the flaky seed check.
 
 ## If blocked
 
-If the lines do not match, or an Acceptance command fails after one honest attempt, stop and write the failing step, the exact error and what was completed to `.handoff/report.md`. If the shell cannot start a browser, follow the end of the README's Tests section and use `CHECK_ATTACH=1`; if that also fails, say so in the report.
+Stop and write the exact command and full failure output to `.handoff/report.md`.
