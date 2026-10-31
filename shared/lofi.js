@@ -33,7 +33,7 @@ const LOFI_MINOR = [
 ];
 const LOFI_PENTA_MAJOR = [0, 2, 4, 7, 9];
 const LOFI_PENTA_MINOR = [0, 3, 5, 7, 10];
-const LOFI_LEVEL = 0.54;
+const LOFI_LEVEL = 0.46;
 
 let lofiBus = null, lofiOut = null;
 let lofiShaper = null, lofiLow = null, lofiHigh = null, lofiDelay = null;
@@ -200,7 +200,7 @@ function lofiPlayStep(step, bar, when){
         lofiVel(0.55), pan);
     }
   }
-  if(step === 6 && Math.random() < 0.4){
+  if(step === (bar % 2 ? 11 : 6) && Math.random() < 0.4){   // the stab moves on odd bars
     for(let i = 0; i < ch.tones.length; i++){
       const pan = ch.tones.length > 1 ? (i / (ch.tones.length - 1)) * 0.8 - 0.4 : 0;
       lofiKeys(lofiHz(ch.tones[i]), lofiJitter(when), 0.4, lofiVel(0.4), pan);

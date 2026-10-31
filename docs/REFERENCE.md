@@ -135,7 +135,7 @@ the mood's `level` or the profile's; the default volume is 18 %. The reverb keep
 and crossfades the generated impulse over 1.5 s when a profile's `seconds`/`decay` differ. The
 inline analyser (`master → analyser → destination`) feeds `PIXEL.audio().rms`/`.peak` for the
 headless checks; at the default volume the city mood measures about −40 dBFS RMS and lo-fi about
-−37 dBFS, and `tests/check-audio.mjs` requires a steady mean RMS above 0.0065.
+−39 dBFS, and `tests/check-audio.mjs` requires a steady mean RMS above 0.0065.
 
 ### Moods
 
@@ -266,7 +266,7 @@ profile, and the `mood` row switches between city and lo-fi exactly as on the ci
 music is synthesized: crossfading five-voice pad layers, a panned sub bass, chord-aware "music
 box" plucks through a generated convolution reverb (two convolvers, crossfaded on a profile
 change), air and rain beds, a compressor and a soft high shelf. Default volume is 18 %; at that
-setting the city mood measures about −40 dBFS RMS and lo-fi about −37 dBFS, and
+setting the city mood measures about −40 dBFS RMS and lo-fi about −39 dBFS, and
 `tests/check-audio.mjs` requires a steady mean RMS above 0.0065. The lo-fi mood adds its own
 synthesized 16-step beat through the saturating, wow/flutter delay chain.
 

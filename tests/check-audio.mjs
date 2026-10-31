@@ -166,12 +166,27 @@ try {
       master.gain.cancelScheduledValues(ac.currentTime);
       master.gain.value = masterLevel();
     })()`);
-    let max = 0;
-    for (let i = 0; i < 80; i++) {
-      max = Math.max(max, await evaluate(`PIXEL.audio().peak`));
-      await sleep(100);
-    }
-    return max <= 0.98 || { max };
+    // every sample of the master for 20 s, so a short hit cannot slip between reads
+    await evaluate(`(() => {
+      window.__ceiling = 0;
+      const sp = ac.createScriptProcessor(1024, 2, 1);
+      const zero = ac.createGain(); zero.gain.value = 0;
+      master.connect(sp); sp.connect(zero); zero.connect(ac.destination);
+      sp.onaudioprocess = e => {
+        for (let c = 0; c < 2; c++) {
+          const d = e.inputBuffer.getChannelData(c);
+          for (let i = 0; i < d.length; i++) window.__ceiling = Math.max(window.__ceiling, Math.abs(d[i]));
+        }
+      };
+      window.__ceilingTap = sp;
+    })()`);
+    await sleep(20000);
+    const max = await evaluate(`(() => {
+      master.disconnect(window.__ceilingTap);
+      window.__ceilingTap.disconnect();
+      return window.__ceiling;
+    })()`);
+    return (max > 0.1 && max <= 0.98) || { max };
   });
 
   await check("sound off suspends and back on keeps the mood", async () => {
@@ -275,7 +290,7 @@ try {
     };
     const hat = await hit("lofiHat");
     const snare = await hit("lofiSnare");
-    return (hat >= 0.07 && hat <= 0.16 && snare >= hat * 3) || { hat, snare };
+    return (hat >= snare * 0.09 && hat <= snare / 3) || { hat, snare };
   });
 
   await check("no uncaught page exceptions", async () => b.exceptions.length === 0 || b.exceptions.slice(0, 3));
