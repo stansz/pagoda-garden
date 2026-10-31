@@ -48,7 +48,8 @@ try {
   });
 
   await check("a finished round earns a seed", async () => {
-    await b.load(pageUrl("index.html"), { prelude: prelude({ clear: true }) });
+    // no clear here: the check above left storage empty
+    await b.load(pageUrl("index.html"), { prelude: prelude() });
     await until(() => evaluate(`typeof PIXEL === "object"`));
     const note = await evaluate(`(() => {
       PIXEL.session.start(25); PIXEL.session.endIn(0); PIXEL.session.tick();
