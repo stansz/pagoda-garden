@@ -13,6 +13,8 @@
   <span class="hint" aria-hidden="true">enter the garden</span>
 </a>
 
+<button id="walkLight" aria-label="Follow the light across the water" title="A light across the water" hidden></button>
+
 <div id="cityMenu" hidden>
   <button data-city="vancouver" aria-pressed="true">Vancouver</button>
   <button data-city="toronto" aria-pressed="false">Toronto</button>
@@ -62,6 +64,21 @@
     <span class="ico" aria-hidden="true">&#9719;</span><span id="focusPillText">focus</span>
   </button>
 </div>
+<div id="walk" role="dialog" aria-modal="true" aria-labelledby="walkPlace" hidden>
+  <div id="walkPanel">
+    <div id="walkTop">
+      <span id="walkPlace"></span>
+      <button id="walkClose" aria-label="Close">&times;</button>
+    </div>
+    <div id="walkTabs" role="group" aria-label="Walk views">
+      <button data-walk-tab="story" aria-pressed="true">story</button>
+      <button data-walk-tab="satchel" aria-pressed="false">satchel</button>
+      <button data-walk-tab="journal" aria-pressed="false">journal</button>
+    </div>
+    <div id="walkBody" aria-live="polite"></div>
+    <div id="walkChoices"></div>
+  </div>
+</div>
 <div id="focusLine" aria-hidden="true" hidden></div>
 
 <script src="shared/time.js"></script>
@@ -82,6 +99,8 @@
 <script src="city/audio.js"></script>
 <script src="city/ui.js"></script>
 <script src="city/focus.js"></script>
+<script src="city/walk.js"></script>
+<script src="city/stories/vancouver.js"></script>
 <script src="city/menu.js"></script>
 <script src="city/pixel.js"></script>
 </body>

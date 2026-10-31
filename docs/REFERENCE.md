@@ -154,6 +154,35 @@ The page exposes `PIXEL` for the capture harness: `render(city, hour, {rain, sno
 `frame(now)`, `framebuffer()`, `setSeason()`, `layers()`, `treeInfo()`, `treeEmitters()`,
 `bakes()`, `driftParticles()`, `view()`. It exists so the art can be reviewed without a browser.
 
+### The Far Light (`city/walk.js`)
+
+A story per city is plain data in `city/stories/<city>.js`, written into one shared `STORY`
+object; `walkStory()` reads `STORY[state.city]`, so a page with no story has no light and no
+panel. A story is
+
+```
+{ title, start, finish, items, goal, pages, scenes }
+items[id]  = { name, note, plant? }
+goal       = { title, show: flag, done: flag, items: [item ids] }
+pages[id]  = { title, text, secret? }
+scenes[id] = { place, text: [line], choices: [choice] }
+line       = string, or { if: cond, t: string }
+choice     = { label, to, end?, show?: cond, if?: cond, hint?, now?, say?, give?: [], take?: [], set?: [], page? }
+```
+
+`show` hides a choice outright; `if` leaves it visible but disabled with its `hint`, and `now`
+is the small note it wears while a time or weather lock is open. A condition is an object whose
+keys must all hold: `night` (20:00–05:00), `nine` (the 21:00 hour), `dawn` (05:00–08:00),
+`rain`, `snow`, `fog` (Open-Meteo codes 45/48), `season` (`spring|summer|autumn|winter`),
+`has` / `lacks` (item id or list), `flag` / `noflag` (flag or list), and `grown` (`"any"` or a
+plant kind, read from the garden's saved plants). `{time}`, `{cond}` and `{temp}` are replaced
+from the city's real clock and weather. The walk is remembered per city in
+`pagoda-walk.v1` as `{ [cityId]: { at, items, flags, pages } }`; the panel paints story,
+satchel and journal views, all text through `textContent`. The engine starts its 1 s
+`setInterval` at load so the light follows the clock, and `syncWalkLight()` hides the light
+whenever `session.kind === "focus"`, so the game never competes with the timer. `WALK` is the
+headless hook the checks use (`get`, `choices`, `choose`, `open`, `close`, `world`).
+
 ---
 
 ## 2. Garden (`/voxel-garden/index.html`)
@@ -215,7 +244,9 @@ the marks). A plant is a sprout for 6 h, a stem with a sprout for 18 h more, the
 adds its elapsed time to the plant's `rain` (saved too) and so grows it faster. Poppies bloom any time,
 moonflowers only at night (20:00–05:00) and snowdrops only in snow; a grown plant otherwise shows a
 bud. The voxel scene is rebuilt only when `refreshPlants` sees a plant's stage or open/closed state
-change.
+change. The lantern is the exception: its seed comes from The Far Light's save
+(`pagoda-walk.v1`) rather than from `spent`, only one can be planted at a time, it opens from
+17:00 to 06:00, and while it is open it adds a lamp to the scene.
 
 ---
 

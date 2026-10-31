@@ -118,3 +118,69 @@
   #gardenLink:hover .hint,#gardenLink:focus-visible .hint{opacity:1}
   #gardenLink:focus-visible{outline:2px solid rgba(232,203,132,.75);outline-offset:3px}
   @media (prefers-reduced-motion: reduce){ #gardenLink .hint{transition:none} }
+
+  /* ---- The Far Light: a small light on the far shore opens a story panel ---- */
+  #walkLight{position:fixed;z-index:4;width:44px;height:44px;margin:-22px 0 0 -22px;padding:0;
+      border:0;background:transparent;cursor:pointer}
+  #walkLight:hover{background:transparent}
+  #walkLight[hidden]{display:none}
+  #walkLight:focus-visible{outline:2px solid rgba(232,203,132,.75);outline-offset:3px}
+  /* the light itself: three quick blinks, then one slow, then dark for a while */
+  #walkLight::before{content:"";position:absolute;left:50%;top:50%;width:var(--walk-px,3px);
+      height:var(--walk-px,3px);transform:translate(-50%,-50%);background:#ffd27a;
+      box-shadow:0 0 6px 2px rgba(255,190,100,.7);animation:walk-blink 6s steps(1,end) infinite}
+  @keyframes walk-blink{
+    0%{opacity:1}
+    4%{opacity:.12}
+    8%{opacity:1}
+    12%{opacity:.12}
+    16%{opacity:1}
+    20%{opacity:.12}
+    26%{opacity:1}
+    50%{opacity:.12}
+    100%{opacity:.12}
+  }
+  #walkLight.steady::before{animation:none}
+  /* right-aligned: the light sits near the right edge at every window size */
+  #walkLight::after{content:"a light across the water";position:absolute;right:0;bottom:100%;
+      transform:translateY(-7px);padding:4px 9px;border-radius:999px;white-space:nowrap;
+      pointer-events:none;background:rgba(10,14,17,.70);border:1px solid rgba(255,255,255,.14);
+      color:#dfe8ee;font:11.5px/1 system-ui,-apple-system,"Segoe UI",sans-serif;
+      letter-spacing:.06em;opacity:0;transition:opacity .16s}
+  #walkLight:hover::after,#walkLight:focus-visible::after,#walkLight.new::after{opacity:1}
+  @media (prefers-reduced-motion: reduce){
+    #walkLight::before{animation:none}
+  }
+  #walk{position:fixed;inset:0;z-index:8;background:rgba(5,8,10,.42)}
+  #walk[hidden]{display:none}
+  #walkPanel{position:absolute;left:50%;bottom:6vh;transform:translateX(-50%);
+      width:min(540px,calc(100vw - 20px));max-height:80vh;box-sizing:border-box;display:flex;
+      flex-direction:column;gap:10px;padding:14px 16px 16px;border-radius:12px;
+      background:rgba(10,14,17,.9);border:1px solid rgba(255,255,255,.14);
+      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+      box-shadow:0 14px 34px rgba(0,0,0,.45);color:#e6edf1;
+      font:12.5px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+  #walkTop{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  #walkPlace{color:#e8cb84;font-size:11.5px;text-transform:uppercase;letter-spacing:.08em}
+  #walkClose{border:0;background:transparent;padding:0 4px;font-size:18px;line-height:1;color:#93a6b3}
+  #walkClose:hover{background:transparent;color:#fff}
+  #walkTabs{display:flex;gap:6px}
+  #walkTabs button{font-size:11.5px}
+  #walkBody{flex:1 1 auto;min-height:0;overflow:auto;
+      scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.22) transparent;
+      font:15.5px/1.6 Georgia,"Iowan Old Style",serif}
+  #walkBody p{margin:0 0 .7em;animation:walk-fade .18s ease-out both}
+  .walk-say{color:#cfdae1;font-style:italic}
+  .walk-got{color:#9fd0b8;font:12.5px/1.45 system-ui,sans-serif}
+  .walk-check,.walk-secrets{color:#93a6b3;font:12.5px/1.45 system-ui,sans-serif}
+  @keyframes walk-fade{from{opacity:0}to{opacity:1}}
+  @media (prefers-reduced-motion: reduce){
+    #walkBody p{animation:none}
+  }
+  #walkChoices{flex:0 0 auto;display:flex;flex-direction:column;gap:6px}
+  #walkChoices button{width:100%;text-align:left;font-size:14px;padding:8px 10px}
+  #walkChoices button:disabled{opacity:.55;cursor:default}
+  .walk-n{color:#e8cb84;margin-right:6px}
+  .walk-hint,.walk-now{display:block;font-size:11.5px;font-style:italic}
+  .walk-hint{color:#8fa0a9}
+  .walk-now{color:#e8cb84}

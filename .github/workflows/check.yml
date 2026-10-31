@@ -17,3 +17,5 @@ jobs:
       - run: node tests/check-focus.mjs
       - run: node tests/check-pages.mjs
       - run: node tests/check-plants.mjs
+      - run: node tests/check-story.mjs
+      - run: node tests/check-walk.mjs

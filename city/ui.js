@@ -378,6 +378,7 @@ function measure(){
   }
   dprNow = dpr;
   layoutGardenLink();
+  layoutWalkLight();
 }
 
 /* The pagoda island is a link into the voxel garden.  Place a real <a> over it,

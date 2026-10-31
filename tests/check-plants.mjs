@@ -214,7 +214,7 @@ try {
       const hiddenBefore = panel.hidden;
       pill.click();
       const hiddenAfter = panel.hidden;
-      const buttons = [...panel.querySelectorAll("[data-kind]")];
+      const buttons = [...panel.querySelectorAll("[data-kind]:not([hidden])")];
       const q = pill.getBoundingClientRect();
       const top = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
       return { hiddenBefore, hiddenAfter, count: buttons.length,

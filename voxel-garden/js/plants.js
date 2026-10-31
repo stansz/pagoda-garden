@@ -7,12 +7,14 @@
 // top. Growth is real time (rain adds to it), and the plants are remembered.
 const PLANT_KEY = "pagoda-garden.plants.v1";
 const CITY_KEY = "pagoda-pixel-window.v1";
+const WALK_KEY = "pagoda-walk.v1";
 const SPROUT_MS = 6 * 3600000, GROWN_MS = 24 * 3600000;
 const PLANT_STEM = "#4c9044", PLANT_SPROUT = "#7fc25a", PLANT_BUD = "#8fb86a";
 const PLANT_KINDS = {
   poppy:      { bloom: "#e0533d", opens: () => true },
   moonflower: { bloom: "#dfe6ff", opens: h => h >= 20 || h < 5 },
-  snowdrop:   { bloom: "#f4f7fb", opens: (h, wx) => wx === "snow" }
+  snowdrop:   { bloom: "#f4f7fb", opens: (h, wx) => wx === "snow" },
+  lantern:    { bloom: "#ffc861", opens: h => h >= 17 || h < 6 }
 };
 
 // A tile can hold a plant when the bare scene has exactly one voxel in its
@@ -44,6 +46,29 @@ function cityMarks(){
   }catch(e){ return 0; }
 }
 function seedCount(){ return Math.max(0, cityMarks() - spent); }
+
+// The Far Light's reward: a rare seed that lives in the walk's save rather than
+// in `spent`, and only while the garden has not grown one yet.
+function lanternSeeds(){
+  try{
+    const w = JSON.parse(localStorage.getItem(WALK_KEY) || "null");
+    const v = w && w.vancouver;
+    if(!v || !Array.isArray(v.items) || v.items.indexOf("lantern") < 0) return 0;
+    return plants.some(p => p.kind === "lantern") ? 0 : 1;
+  }catch(e){ return 0; }
+}
+
+// A grown lantern adds its own lamp to the scene while it is open.
+function lanternLamps(){
+  const out = [];
+  for(const p of plants){
+    if(p.kind !== "lantern") continue;
+    if(plantStage(p) !== 2) continue;
+    if(!PLANT_KINDS.lantern.opens(hour, currentWx)) continue;
+    out.push([p.x + 0.5, 3.5, p.z + 0.5, 0.8]);
+  }
+  return out.length ? out : null;
+}
 
 function loadPlants(){
   plants = [];
@@ -99,7 +124,7 @@ function refreshPlants(){
   }
   if(sig === plantSig) return;
   plantSig = sig;
-  S = gardenScene(plants.length ? plantVoxels : null);
+  S = gardenScene(plants.length ? plantVoxels : null, lanternLamps());
   cacheState = null;
 }
 
@@ -128,15 +153,16 @@ function pickTile(cx, cy){
 
 function plantSeed(x, z, kind){
   if(!Object.prototype.hasOwnProperty.call(PLANT_KINDS, kind)) return false;
-  if(seedCount() <= 0) return false;
+  const rare = kind === "lantern";
+  if(rare ? lanternSeeds() <= 0 : seedCount() <= 0) return false;
   const k = x + "," + z;
   if(!FREE.has(k)) return false;
   if(plants.some(p => p.x === x && p.z === z)) return false;
   plants.push({ x, z, kind, at: Date.now(), rain: 0 });
-  spent++;
+  if(!rare) spent++;
   savePlants();
   refreshPlants();
-  if(seedCount() === 0) plantingKind = null;
+  if(rare || seedCount() === 0) plantingKind = null;
   paintBed();
   return true;
 }
@@ -146,17 +172,21 @@ function paintBed(){
   const panel = document.getElementById("bedPanel");
   const note = document.getElementById("bedNote");
   const seeds = seedCount();
+  const rare = lanternSeeds();
   if(pill){
-    pill.textContent = "seeds " + seeds;
+    pill.textContent = "seeds " + seeds + (rare > 0 ? " + lantern" : "");
     if(panel) pill.setAttribute("aria-expanded", String(!panel.hidden));
   }
   for(const b of document.querySelectorAll("[data-kind]")){
     b.setAttribute("aria-pressed", String(b.dataset.kind === plantingKind));
-    b.disabled = seeds === 0;
+    if(b.dataset.kind === "lantern"){
+      b.hidden = rare === 0;
+      b.disabled = rare === 0;
+    }else b.disabled = seeds === 0;
   }
   if(note){
     if(plantingKind) note.textContent = "Tap a patch of grass to plant a " + plantingKind + ".";
-    else if(seeds > 0) note.textContent = "Pick a seed to plant.";
+    else if(seeds > 0 || rare > 0) note.textContent = "Pick a seed to plant.";
     else if(plants.length === 0) note.textContent = "A finished focus round in the city earns a seed.";
     else note.textContent = "A finished focus round earns another seed.";
   }

@@ -25,6 +25,7 @@ from static files.
 | Corner card | collapsed it reads `Vancouver 01:22` / `Overcast 7 °C Autumn`; expanded it adds the hemisphere, the weather source and the controls. `↻` refetches that city now; click the header to collapse |
 | Focus timer | the `◷ focus` pill in the bottom-right opens a small panel: 25 or 50 minutes of focus in rounds of 4, a short break after rounds 1–3 (5 or 10 min) and a long one after the 4th (15 or 20 min). `pause`, `+5m` and `skip break` while it runs, plus an optional `auto-start next focus`; `f` starts/stops, `p` pauses, `Esc` closes the panel. A thin line along the bottom edge fills gold through a round and green through a break, and the scene tints slightly cool in focus and warm in a break |
 | The garden | click the pagoda island |
+| The Far Light | in Vancouver, click the small light blinking on the far shore. A choose-your-own-adventure with a satchel and a journal: some choices wait for the real clock, the real weather or something you grew in the garden. The light hides during a focus round. `Esc` leaves, and the walk is remembered |
 
 The city page also reads `?city=<id>`, so links can land on a specific city.
 
@@ -36,7 +37,7 @@ The city page also reads `?city=<id>`, so links can land on a specific city.
 | Zoom | wheel, pinch, `+` / `-` buttons, `+` / `-` keys, double-click to reset |
 | Time and weather | *not controls* — the garden always follows its city's real clock and sky |
 | City | the `city` row in the card; `?city=<id>` lands on one, otherwise the last one you chose, otherwise Vancouver |
-| Seeds | each finished focus round in the city earns one; the `seeds` pill picks what to plant, then tap the grass |
+| Seeds | each finished focus round in the city earns one; the `seeds` pill picks what to plant, then tap the grass; finishing The Far Light adds a lantern seed |
 | Ambience | `sound` (browsers need one click), volume slider |
 | Back | a `← back to the city` pill appears when you arrive from the city view |
 
@@ -64,7 +65,8 @@ a remembered `sound on` waits for the first click before starting, because brows
 ```
 index.html            pixel city view (main page): markup, stylesheet and script tags
 city/                 pixel city view code: city.css + one classic script per concern,
-                      with one file per city under city/cities/
+                      with one file per city under city/cities/ and one story per
+                      city under city/stories/
 voxel-garden/index.html     voxel garden: markup, stylesheet and script tags
 voxel-garden/js/      the garden's classic scripts (world, render, audio, plants, ui, loop)
 voxel-garden/garden.css     the garden's stylesheet
@@ -104,6 +106,14 @@ also runs in GitHub Actions.
 then checks the `seeds` pill and panel, planting by tap (and refusing on water, paths, the pagoda
 and used ground), the seed count, growth stages, rain watering, the bloom rules for poppies,
 moonflowers and snowdrops, and that plants survive a reload. It also runs in GitHub Actions.
+
+`node tests/check-story.mjs` needs no browser: it walks every state of every story in
+`city/stories/` in every combination of time, weather, season and garden, and proves no scene is
+unreachable, nobody can get stuck and no ending can demand a snowfall. It runs in GitHub Actions.
+
+`node tests/check-walk.mjs` plays The Far Light in a real page: the light on the far shore, the
+panel, the satchel and journal, the clock/weather/plant locks, a save that survives a reload, the
+keyboard shortcuts and the lantern seed it plants in the garden. It runs in GitHub Actions.
 
 `node tests/check-render.mjs` is a local tool, not run in CI: it loads the same pages with a frozen
 clock, seeded randomness, a virtual animation clock and the stubbed fetch, steps a fixed number of

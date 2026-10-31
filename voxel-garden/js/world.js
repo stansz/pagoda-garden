@@ -208,8 +208,8 @@ function buildGarden(P){
   pagoda(P, COL.roof, COL.wall, COL.gold);
 }
 
-function gardenScene(extra){
-  return makeScene("Garden", GARDEN_LAMPS, P => { buildGarden(P); if(extra) extra(P); });
+function gardenScene(extra, lamps){
+  return makeScene("Garden", lamps ? GARDEN_LAMPS.concat(lamps) : GARDEN_LAMPS, P => { buildGarden(P); if(extra) extra(P); });
 }
 let S = gardenScene();
 

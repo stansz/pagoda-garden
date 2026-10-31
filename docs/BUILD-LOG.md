@@ -156,6 +156,18 @@ reloads so the garden you left is the garden you come back to. The seed checks a
 bug: `plot()` stored its tiles as pairs and looked them up as strings, so the pond and the path had
 been drawing as grass since Oct 25. Both are back.
 
+## Oct 31 — a light on the far shore
+
+The city had a clock, a sky and a seed economy, and nothing to do at them, so Vancouver got a story. A small light
+blinks by the cherry tree; clicking it opens a choose-your-own-adventure over the art, with a satchel and a journal.
+The story is plain data in `city/stories/`, read by one engine, `city/walk.js`, so the other cities can follow
+without new code. Choices can wait for the real hour, the real weather, the season or a plant grown in the garden,
+and a locked choice stays visible with a reason, because "only while it is raining" is the best reason to come back.
+There is no combat, no failure and no timer, and the light hides during a focus round so the game can never compete
+with the thing it is a reward for. Finishing it gives a lantern seed, which closes the loop back to the garden.
+`check-story` walks every state in every combination of time, weather, season and garden, so a story cannot strand
+anyone, and no ending can demand a snowfall.
+
 ## Things deliberately not done
 
 - **No bundler, no framework, no build step.** Each page is an HTML file plus plain stylesheet
